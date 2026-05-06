@@ -73,6 +73,66 @@ test("stopMacOSBridgeService clears stale pairing and status files", () => {
   });
 });
 
+test("stopMacOSBridgeService terminates the recorded run-service process when launchd is stale", () => {
+  withTempDaemonEnv(() => {
+    writeBridgeStatus({ state: "running", connectionStatus: "connected", pid: 4242 });
+
+    const killed = [];
+    stopMacOSBridgeService({
+      platform: "darwin",
+      execFileSyncImpl(command, args) {
+        if (command === "launchctl") {
+          const error = new Error("Could not find service");
+          error.stderr = Buffer.from("Could not find service");
+          throw error;
+        }
+
+        assert.equal(command, "ps");
+        assert.deepEqual(args, ["-p", "4242", "-o", "command="]);
+        return "/usr/local/bin/node /usr/local/bin/remodex run-service";
+      },
+      processImpl: {
+        pid: 9999,
+        kill(pid, signal) {
+          killed.push([pid, signal]);
+        },
+      },
+    });
+
+    assert.deepEqual(killed, [[4242, "SIGTERM"]]);
+    assert.equal(readBridgeStatus(), null);
+  });
+});
+
+test("stopMacOSBridgeService does not kill an unrelated stale pid", () => {
+  withTempDaemonEnv(() => {
+    writeBridgeStatus({ state: "running", connectionStatus: "connected", pid: 4243 });
+
+    const killed = [];
+    stopMacOSBridgeService({
+      platform: "darwin",
+      execFileSyncImpl(command) {
+        if (command === "launchctl") {
+          const error = new Error("Could not find service");
+          error.stderr = Buffer.from("Could not find service");
+          throw error;
+        }
+
+        return "/Applications/Other.app/Contents/MacOS/Other";
+      },
+      processImpl: {
+        pid: 9999,
+        kill(pid, signal) {
+          killed.push([pid, signal]);
+        },
+      },
+    });
+
+    assert.deepEqual(killed, []);
+    assert.equal(readBridgeStatus(), null);
+  });
+});
+
 test("stopMacOSBridgeService falls back to label bootout when plist bootout fails", () => {
   withTempDaemonEnv(() => {
     const calls = [];

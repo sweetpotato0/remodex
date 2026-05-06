@@ -62,6 +62,8 @@ struct ContentView: View {
     @AppStorage("codex.whatsNew.lastPresentedVersion") private var lastPresentedWhatsNewVersion = ""
 
     private let sidebarWidth: CGFloat = 330
+    private let iPadSidebarIdealWidth: CGFloat = 360
+    private let iPadSidebarMaxWidth: CGFloat = 420
     // Lets the drawer gesture start a bit inside the content instead of only on the bezel edge.
     private let sidebarOpenActivationWidth: CGFloat = 80
     private let sidebarPrewarmDelayNanoseconds: UInt64 = 700_000_000
@@ -341,7 +343,44 @@ struct ContentView: View {
         shouldUseFullWidthSidebar ? availableWidth : min(sidebarWidth, availableWidth)
     }
 
+    @ViewBuilder
     private var mainAppBody: some View {
+        if usesSplitNavigationShell {
+            splitMainAppBody
+        } else {
+            drawerMainAppBody
+        }
+    }
+
+    // Uses the PR #24 iPad proportions while keeping the current sidebar/detail behavior.
+    private var splitMainAppBody: some View {
+        NavigationSplitView {
+            SidebarView(
+                selectedThread: $selectedThread,
+                showSettings: $showSettings,
+                isSearchActive: $isSearchActive,
+                showsInlineCloseButton: false,
+                isVisible: true,
+                onClose: {},
+                onNewChatCreationStateChange: { isCreating in
+                    setNewChatOpeningState(isCreating)
+                },
+                onOpenThread: { thread in
+                    openThreadFromSidebar(thread)
+                }
+            )
+            .navigationSplitViewColumnWidth(
+                min: sidebarWidth,
+                ideal: iPadSidebarIdealWidth,
+                max: iPadSidebarMaxWidth
+            )
+        } detail: {
+            detailNavigationLayer
+        }
+        .navigationSplitViewStyle(.balanced)
+    }
+
+    private var drawerMainAppBody: some View {
         GeometryReader { proxy in
             let currentSidebarWidth = effectiveSidebarWidth(for: proxy.size.width)
             let currentSidebarRevealWidth = sidebarRevealWidth(for: currentSidebarWidth)
@@ -401,6 +440,29 @@ struct ContentView: View {
 
     // MARK: - Layers
 
+    private var usesSplitNavigationShell: Bool {
+        horizontalSizeClass == .regular
+    }
+
+    private var detailNavigationLayer: some View {
+        GeometryReader { proxy in
+            ZStack {
+                mainNavigationLayer
+                    .id(selectedThread?.id ?? "home")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                PetCompanionStatusSyncView()
+
+                PetCompanionOverlay(
+                    isInteractionEnabled: true,
+                    bottomExclusionHeight: 16
+                )
+                .frame(width: proxy.size.width, height: proxy.size.height)
+            }
+            .background(Color(.systemBackground))
+        }
+    }
+
     private var mainNavigationLayer: some View {
         NavigationStack(path: $navigationPath) {
             mainContent
@@ -420,9 +482,7 @@ struct ContentView: View {
         if isOpeningNewChatFromSidebar {
             NewChatOpeningStateView()
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        hamburgerButton
-                    }
+                    sidebarToggleToolbarItem
                 }
         } else if let thread = selectedThread {
             TurnView(
@@ -437,9 +497,7 @@ struct ContentView: View {
                 })
                 .environment(\.wakeMacDisplayAction, wakeMacDisplayRecoveryAction)
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        hamburgerButton
-                    }
+                    sidebarToggleToolbarItem
                 }
         } else {
             HomeEmptyStateView(
@@ -480,9 +538,16 @@ struct ContentView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    hamburgerButton
-                }
+                sidebarToggleToolbarItem
+            }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var sidebarToggleToolbarItem: some ToolbarContent {
+        if !usesSplitNavigationShell {
+            ToolbarItem(placement: .topBarLeading) {
+                hamburgerButton
             }
         }
     }

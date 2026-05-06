@@ -1140,6 +1140,7 @@ private struct UserBubbleTextBlock<Content: View>: View {
 struct MessageRow: View, Equatable {
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(UserBubbleColor.storageKey) private var userBubbleColorRawValue = UserBubbleColor.defaultStoredRawValue
 
     let message: CodexMessage
@@ -1835,6 +1836,36 @@ struct MessageRow: View, Equatable {
 
     @State private var isShowingBlockDiffSheet = false
 
+    private var usesPadDiffPresentation: Bool {
+        horizontalSizeClass == .regular
+    }
+
+    private var blockDiffSheetPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { !usesPadDiffPresentation && isShowingBlockDiffSheet },
+            set: { isShowingBlockDiffSheet = $0 }
+        )
+    }
+
+    private var blockDiffFullScreenPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { usesPadDiffPresentation && isShowingBlockDiffSheet },
+            set: { isShowingBlockDiffSheet = $0 }
+        )
+    }
+
+    private func blockDiffPresentation(
+        entries: [TurnFileChangeSummaryEntry],
+        bodyText: String
+    ) -> some View {
+        TurnDiffSheet(
+            title: "Changes",
+            entries: entries,
+            bodyText: bodyText,
+            messageID: message.id
+        )
+    }
+
     private var hasTurnEndActions: Bool {
         AssistantTurnEndActionVisibility.shouldShow(
             accessoryState: assistantBlockAccessoryState
@@ -1881,13 +1912,11 @@ struct MessageRow: View, Equatable {
                             .adaptiveGlass(.regular, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                         .buttonStyle(.plain)
-                        .sheet(isPresented: $isShowingBlockDiffSheet) {
-                            TurnDiffSheet(
-                                title: "Changes",
-                                entries: entries,
-                                bodyText: accessory.blockDiffText ?? "",
-                                messageID: message.id
-                            )
+                        .sheet(isPresented: blockDiffSheetPresentedBinding) {
+                            blockDiffPresentation(entries: entries, bodyText: accessory.blockDiffText ?? "")
+                        }
+                        .fullScreenCover(isPresented: blockDiffFullScreenPresentedBinding) {
+                            blockDiffPresentation(entries: entries, bodyText: accessory.blockDiffText ?? "")
                         }
                     }
 
