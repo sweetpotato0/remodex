@@ -105,6 +105,7 @@ extension CodexService {
                 secureConnectionState = .encrypted
             }
 
+            startWebSocketKeepAliveLoop()
             startSyncLoop()
             // Push registration is best-effort and talks to the bridge, so it must not
             // hold the main connect path hostage when the managed backend is slow.
@@ -605,6 +606,8 @@ extension CodexService {
 
     // Removes the current socket reference before reconnect/teardown logic mutates shared state.
     private func cancelCurrentSocketConnection() {
+        stopWebSocketKeepAliveLoop()
+
         if let connection = webSocketConnection {
             connection.stateUpdateHandler = nil
             webSocketConnection = nil
