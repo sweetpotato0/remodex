@@ -21,6 +21,7 @@ test("bridge forwards desktop IPC actions to the phone and routes replies back t
   const ipcFrames = [];
   let relaySocket = null;
   let ipcServerSocket = null;
+  let bridge = null;
   let fakeCodex = null;
 
   await new Promise((resolve) => relayServer.once("listening", resolve));
@@ -70,7 +71,7 @@ test("bridge forwards desktop IPC actions to the phone and routes replies back t
   });
 
   t.after(() => {
-    closeFakeCodexForTest(fakeCodex);
+    bridge?.stop();
     relaySocket?.close();
     relayServer.close();
     ipcServer.close();
@@ -78,7 +79,7 @@ test("bridge forwards desktop IPC actions to the phone and routes replies back t
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  startBridge({
+  bridge = startBridge({
     printPairingQr: false,
     config: {
       relayUrl: `ws://127.0.0.1:${relayServer.address().port}`,
@@ -175,6 +176,7 @@ test("bridge forwards live desktop assistant deltas to the phone", async (t) => 
   const relayMessages = [];
   let relaySocket = null;
   let ipcServerSocket = null;
+  let bridge = null;
   let fakeCodex = null;
 
   await new Promise((resolve) => relayServer.once("listening", resolve));
@@ -213,7 +215,7 @@ test("bridge forwards live desktop assistant deltas to the phone", async (t) => 
   });
 
   t.after(() => {
-    closeFakeCodexForTest(fakeCodex);
+    bridge?.stop();
     relaySocket?.close();
     relayServer.close();
     ipcServer.close();
@@ -221,7 +223,7 @@ test("bridge forwards live desktop assistant deltas to the phone", async (t) => 
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  startBridge({
+  bridge = startBridge({
     printPairingQr: false,
     config: {
       relayUrl: `ws://127.0.0.1:${relayServer.address().port}`,
@@ -405,23 +407,6 @@ function createFakeCodexTransport() {
       listeners.close?.();
     },
   };
-}
-
-function closeFakeCodexForTest(fakeCodex) {
-  const previousExitCode = process.exitCode;
-  const originalError = console.error;
-  console.error = (message, ...args) => {
-    if (String(message).includes("Codex transport closed unexpectedly.")) {
-      return;
-    }
-    originalError(message, ...args);
-  };
-  try {
-    fakeCodex?.emitClose();
-  } finally {
-    console.error = originalError;
-    process.exitCode = previousExitCode;
-  }
 }
 
 function attachFrameReader(socket, onFrame) {
