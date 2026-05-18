@@ -111,25 +111,20 @@ final class SubscriptionService {
     }
 
     var remainingFreeSendAttempts: Int {
-        max(0, Self.freeSendLimit - freeSendCount)
+        Int.max
     }
 
     var hasFreeSendAccess: Bool {
-        freeSendCount < Self.freeSendLimit
+        true
     }
 
     var hasAppAccess: Bool {
-        hasProAccess || hasFreeSendAccess
+        true
     }
 
-    // Counts a valid send attempt for free users even if the turn later fails.
+    // Self-hosted builds should not meter local sends or require a Pro unlock.
     func consumeFreeSendAttemptIfNeeded() {
-        guard !hasProAccess, freeSendCount < Self.freeSendLimit else {
-            return
-        }
-
-        freeSendCount += 1
-        defaults.set(freeSendCount, forKey: Self.freeSendCountDefaultsKey)
+        return
     }
 
     // Bootstraps subscription state once at launch or from the recovery retry action.

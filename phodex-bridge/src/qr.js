@@ -9,6 +9,7 @@ const qrcode = require("qrcode-terminal");
 
 const SHORT_PAIRING_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const SHORT_PAIRING_CODE_LENGTH = 10;
+const NEVER_EXPIRES_AT_MS = 253_402_300_799_000;
 // Generates a short-lived human-friendly pairing token for reconnect flows.
 function createShortPairingCode({
   length = SHORT_PAIRING_CODE_LENGTH,
@@ -54,7 +55,10 @@ function printQR(pairingSessionOrPayload, options = {}) {
   }
   console.log(`\nSession ID: ${sessionIdShort || "(none)"}`);
   console.log(`Device ID: ${pairingPayload.macDeviceId}`);
-  console.log(`Expires: ${new Date(pairingPayload.expiresAt).toISOString()}\n`);
+  const expiryLabel = pairingPayload.expiresAt >= NEVER_EXPIRES_AT_MS
+    ? "Never"
+    : new Date(pairingPayload.expiresAt).toISOString();
+  console.log(`Expires: ${expiryLabel}\n`);
 
   if (shouldPrintPairingJson({ env, explicitValue: options.printPairingJson })) {
     console.log("Pairing JSON debug output is disabled because the payload contains private relay metadata.\n");

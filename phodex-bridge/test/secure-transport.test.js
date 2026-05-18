@@ -20,6 +20,7 @@ const {
 const {
   HANDSHAKE_MODE_QR_BOOTSTRAP,
   HANDSHAKE_MODE_TRUSTED_RECONNECT,
+  NEVER_EXPIRES_AT_MS,
   createBridgeSecureTransport,
   nonceForDirection,
 } = require("../src/secure-transport");
@@ -67,6 +68,49 @@ test("secure transport rejects plaintext JSON-RPC before the secure handshake", 
   assert.equal(handled, true);
   assert.equal(controlMessages[0]?.kind, "secureError");
   assert.equal(controlMessages[0]?.code, "update_required");
+});
+
+test("secure transport emits non-expiring pairing metadata for QR bootstrap", () => {
+  const macIdentity = createOkpKeyPair("ed25519");
+  const phoneIdentity = createOkpKeyPair("ed25519");
+  const phoneEphemeral = createOkpKeyPair("x25519");
+  const secureTransport = createBridgeSecureTransport({
+    sessionId: "session-never-expire",
+    relayUrl: "wss://relay.example/relay",
+    deviceState: {
+      macDeviceId: "mac-never-expire",
+      macIdentityPrivateKey: macIdentity.privateKey,
+      macIdentityPublicKey: macIdentity.publicKey,
+      trustedPhones: {},
+    },
+  });
+
+  const pairingPayload = secureTransport.createPairingPayload();
+  assert.equal(pairingPayload.expiresAt, NEVER_EXPIRES_AT_MS);
+
+  const controlMessages = [];
+  secureTransport.handleIncomingWireMessage(
+    JSON.stringify({
+      kind: "clientHello",
+      protocolVersion: 1,
+      sessionId: "session-never-expire",
+      handshakeMode: HANDSHAKE_MODE_QR_BOOTSTRAP,
+      phoneDeviceId: "phone-never-expire",
+      phoneIdentityPublicKey: phoneIdentity.publicKey,
+      phoneEphemeralPublicKey: phoneEphemeral.publicKey,
+      clientNonce: Buffer.alloc(32, 7).toString("base64"),
+    }),
+    {
+      sendControlMessage(message) {
+        controlMessages.push(message);
+      },
+      onApplicationMessage() {},
+    }
+  );
+
+  const serverHello = controlMessages.find((message) => message.kind === "serverHello");
+  assert.ok(serverHello, "expected serverHello");
+  assert.equal(serverHello.expiresAtForTranscript, NEVER_EXPIRES_AT_MS);
 });
 
 test("secure transport round-trips encrypted payloads after a trusted reconnect handshake", () => {

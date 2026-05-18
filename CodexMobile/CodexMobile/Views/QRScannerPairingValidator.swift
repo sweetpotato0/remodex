@@ -59,11 +59,6 @@ func validatePairingQRCode(_ code: String, now: Date = Date()) -> QRScannerPairi
             return .scanError("Pairing code is missing the session ID. Re-generate it from the bridge.")
         }
 
-        let expiryDate = Date(timeIntervalSince1970: TimeInterval(payload.expiresAt) / 1000)
-        guard expiryDate.addingTimeInterval(codexSecureClockSkewToleranceSeconds) >= now else {
-            return .scanError("This pairing code has expired. Generate a new one from the Mac bridge.")
-        }
-
         return .success(payload)
     }
 

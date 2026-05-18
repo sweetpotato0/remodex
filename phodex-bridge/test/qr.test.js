@@ -32,7 +32,7 @@ test("printQR prints the short pairing code without the full pairing JSON by def
         relay: "ws://127.0.0.1:9000/relay",
         sessionId: "session-sensitive-long-value",
         macDeviceId: "mac-123",
-        expiresAt: 1_900_000_000_000,
+        expiresAt: 253_402_300_799_000,
       },
       pairingCode: "ABCDEFGHJK",
     }, {
@@ -44,6 +44,7 @@ test("printQR prints the short pairing code without the full pairing JSON by def
   assert.match(output, /ABCDEFGHJK/);
   assert.doesNotMatch(output, /RMX1:/);
   assert.match(output, /Session ID: session-/);
+  assert.match(output, /Expires: Never/);
   assert.doesNotMatch(output, /session-sensitive-long-value/);
   assert.doesNotMatch(output, /Pairing JSON/);
 });

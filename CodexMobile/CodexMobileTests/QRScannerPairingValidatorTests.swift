@@ -89,7 +89,7 @@ final class QRScannerPairingValidatorTests: XCTestCase {
         XCTAssertEqual(code, "AB23CD34EF")
     }
 
-    func testExpiredPayloadReturnsScanError() {
+    func testExpiredPayloadStillReturnsSuccessForSelfHostedPairing() {
         let result = validatePairingQRCode(
             pairingQRCode(
                 v: codexPairingQRVersion,
@@ -98,11 +98,11 @@ final class QRScannerPairingValidatorTests: XCTestCase {
             now: Date(timeIntervalSince1970: 1_800_000_000)
         )
 
-        guard case .scanError(let message) = result else {
-            return XCTFail("Expected an expiry error.")
+        guard case .success(let payload) = result else {
+            return XCTFail("Expected expired payloads to remain usable for self-hosted pairing.")
         }
 
-        XCTAssertEqual(message, "This pairing code has expired. Generate a new one from the Mac bridge.")
+        XCTAssertEqual(payload.sessionId, "session-123")
     }
 
     private func pairingQRCode(

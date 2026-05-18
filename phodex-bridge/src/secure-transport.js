@@ -29,7 +29,7 @@ const HANDSHAKE_MODE_QR_BOOTSTRAP = "qr_bootstrap";
 const HANDSHAKE_MODE_TRUSTED_RECONNECT = "trusted_reconnect";
 const SECURE_SENDER_MAC = "mac";
 const SECURE_SENDER_IPHONE = "iphone";
-const MAX_PAIRING_AGE_MS = 5 * 60 * 1000;
+const NEVER_EXPIRES_AT_MS = 253_402_300_799_000;
 const MAX_BRIDGE_OUTBOUND_MESSAGES = 500;
 const MAX_BRIDGE_OUTBOUND_BYTES = 10 * 1024 * 1024;
 
@@ -50,14 +50,14 @@ function createBridgeSecureTransport({
   // Tracks the highest bridge seq the phone has definitely acked, so replay
   // decisions never depend on best-effort local socket writes.
   let lastRelayedBridgeOutboundSeq = 0;
-  let currentPairingExpiresAt = Date.now() + MAX_PAIRING_AGE_MS;
+  let currentPairingExpiresAt = NEVER_EXPIRES_AT_MS;
   let nextKeyEpoch = 1;
   let nextBridgeOutboundSeq = 1;
   let outboundBufferBytes = 0;
   const outboundBuffer = [];
 
   function createPairingPayload() {
-    currentPairingExpiresAt = Date.now() + MAX_PAIRING_AGE_MS;
+    currentPairingExpiresAt = NEVER_EXPIRES_AT_MS;
     return {
       v: PAIRING_QR_VERSION,
       relay: relayUrl,
@@ -162,14 +162,6 @@ function createBridgeSecureTransport({
       sendControlMessage(createSecureError({
         code: "invalid_handshake_mode",
         message: "The iPhone requested an unknown secure pairing mode.",
-      }));
-      return;
-    }
-
-    if (handshakeMode === HANDSHAKE_MODE_QR_BOOTSTRAP && Date.now() > currentPairingExpiresAt) {
-      sendControlMessage(createSecureError({
-        code: "pairing_expired",
-        message: "The pairing QR code has expired. Generate a new QR code from the bridge.",
       }));
       return;
     }
@@ -769,6 +761,7 @@ function base64ToBase64Url(value) {
 module.exports = {
   HANDSHAKE_MODE_QR_BOOTSTRAP,
   HANDSHAKE_MODE_TRUSTED_RECONNECT,
+  NEVER_EXPIRES_AT_MS,
   PAIRING_QR_VERSION,
   SECURE_PROTOCOL_VERSION,
   createBridgeSecureTransport,

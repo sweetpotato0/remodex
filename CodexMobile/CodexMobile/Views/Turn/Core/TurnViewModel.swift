@@ -1552,11 +1552,6 @@ final class TurnViewModel {
             return nil
         }
 
-        if let subscriptions, !subscriptions.hasAppAccess {
-            codex.lastErrorMessage = "Your 5 free messages are over. Unlock Remodex Pro to keep chatting."
-            return nil
-        }
-
         return PendingTurnSend(
             payload: payload,
             attachments: attachments,

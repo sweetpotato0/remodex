@@ -12,6 +12,7 @@ let codexPairingQRVersion = 2
 let codexSecureHandshakeTag = "remodex-e2ee-v1"
 let codexSecureHandshakeLabel = "client-auth"
 let codexSecureClockSkewToleranceSeconds: TimeInterval = 60
+let codexPairingNeverExpiresAt: Int64 = 253_402_300_799_000
 let codexTrustedSessionResolveTag = "remodex-trusted-session-resolve-v1"
 let codexTrustedSessionResolveClockSkewToleranceSeconds: TimeInterval = 90
 

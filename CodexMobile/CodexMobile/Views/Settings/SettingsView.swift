@@ -59,14 +59,6 @@ struct SettingsView: View {
             SettingsBridgeVersionCard {
                 presentSettingsSheet(.commandReference)
             }
-            SettingsSubscriptionCard(
-                onShowPaywall: {
-                    presentSettingsSheet(.paywall)
-                },
-                onRedeemCode: {
-                    presentOfferCodeRedemption()
-                }
-            )
             SettingsUsageCard()
             SettingsGPTAccountCard {
                 presentSettingsSheet(.macLoginInfo)
