@@ -605,7 +605,8 @@ struct MessageRow: View, Equatable {
                         StreamingAssistantMarkdownTextView(
                             text: visibleAssistantTextWithoutImageSyntax,
                             enablesSelection: enablesInlineMarkdownSelectionInTimeline,
-                            constrainsToAvailableWidth: true
+                            constrainsToAvailableWidth: true,
+                            animatesReveal: showsStreamingAnimations
                         )
                     }
                 } else {

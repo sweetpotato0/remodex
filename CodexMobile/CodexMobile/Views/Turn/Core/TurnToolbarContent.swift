@@ -49,29 +49,17 @@ struct TurnToolbarContent: ToolbarContent {
         let canTapNewChat = onTapNewChat != nil && !isThreadActionLoading
         let canTapTerminal = onTapTerminal != nil
 
-        ToolbarItem(placement: .principal) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(displayTitle)
-                    .font(AppFont.subheadline(weight: .medium))
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                if let context = navigationContext {
-                    Button {
-                        HapticFeedback.shared.triggerImpactFeedback(style: .light)
-                        isShowingPathSheet = true
-                    } label: {
-                        Text(context.subtitle)
-                            .font(AppFont.caption(weight: .regular))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .buttonStyle(.plain)
-                }
+        // Keep title + path as one leading-aligned control. Splitting them into
+        // iOS 26 `.title` / `.subtitle` placements lets the system align each
+        // row independently, which makes the stack look offset.
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .title) {
+                titleTapTarget
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            ToolbarItem(placement: .principal) {
+                titleTapTarget
+            }
         }
 
         // Order: git actions sit closest to the title, the ellipsis thread-
@@ -157,6 +145,50 @@ struct TurnToolbarContent: ToolbarContent {
                 .accessibilityLabel("Thread actions")
             }
         }
+    }
+
+    @ViewBuilder
+    private var titleTapTarget: some View {
+        if let context = navigationContext {
+            Button {
+                HapticFeedback.shared.triggerImpactFeedback(style: .light)
+                isShowingPathSheet = true
+            } label: {
+                titleSubtitleBlock(context: context)
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .accessibilityLabel("\(displayTitle), \(context.subtitle)")
+            .accessibilityHint("Opens thread location")
+        } else {
+            titleLabel
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func titleSubtitleBlock(context: TurnThreadNavigationContext) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            titleLabel
+            subtitleLabel(for: context)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
+    }
+
+    private var titleLabel: some View {
+        Text(displayTitle)
+            .font(AppFont.subheadline(weight: .medium))
+            .lineLimit(1)
+            .truncationMode(.tail)
+    }
+
+    private func subtitleLabel(for context: TurnThreadNavigationContext) -> some View {
+        Text(context.subtitle)
+            .font(AppFont.caption(weight: .regular))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .truncationMode(.middle)
     }
 }
 

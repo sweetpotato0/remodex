@@ -64,8 +64,7 @@ struct TurnTimelineView<EmptyState: View, Composer: View>: View {
     // Cached per-render artifacts to avoid O(n) recomputation inside the body.
     @State private var cachedBlockInfoByMessageID: [String: AssistantBlockAccessoryState] = [:]
     @State private var cachedNewestStreamingMessageID: String? = nil
-    @State private var cachedRenderItems: [TurnTimelineRenderItem] = []
-    @State private var cachedRenderItemsSignature: TurnTimelineRenderItemsCacheSignature?
+    @State private var renderItemsCache = TurnTimelineRenderItemsCache()
     @State private var blockInfoInputKey: Int = 0
     @State private var scrollSessionThreadID: String?
     @State private var autoScrollMode: TurnAutoScrollMode = .followBottom
@@ -93,12 +92,10 @@ struct TurnTimelineView<EmptyState: View, Composer: View>: View {
     }
 
     private var visibleRenderItems: [TurnTimelineRenderItem] {
-        let signature = renderItemsCacheSignature(for: visibleMessages)
-        if signature == cachedRenderItemsSignature {
-            return cachedRenderItems
-        }
-        return TurnTimelineRenderProjection.project(
-            messages: Array(visibleMessages),
+        let visible = visibleMessages
+        return renderItemsCache.items(
+            for: renderItemsCacheSignature(for: visible),
+            messages: visible,
             completedTurnIDs: completedTurnIDs
         )
     }
@@ -310,11 +307,10 @@ struct TurnTimelineView<EmptyState: View, Composer: View>: View {
     }
 
     private func recomputeRenderItemsIfNeeded() {
-        let signature = renderItemsCacheSignature(for: visibleMessages)
-        guard signature != cachedRenderItemsSignature else { return }
-        cachedRenderItemsSignature = signature
-        cachedRenderItems = TurnTimelineRenderProjection.project(
-            messages: Array(visibleMessages),
+        let visible = visibleMessages
+        _ = renderItemsCache.items(
+            for: renderItemsCacheSignature(for: visible),
+            messages: visible,
             completedTurnIDs: completedTurnIDs
         )
     }
@@ -345,8 +341,14 @@ struct TurnTimelineView<EmptyState: View, Composer: View>: View {
             messages: visible,
             completedTurnIDs: completedTurnIDs
         )
-        if updated != cachedBlockInfoByMessageID {
-            cachedBlockInfoByMessageID = updated
+        let renderItems = visibleRenderItems
+        let visibleUpdated = Self.rehomeHiddenAccessoryStates(
+            updated,
+            messages: visible,
+            renderItems: renderItems
+        )
+        if visibleUpdated != cachedBlockInfoByMessageID {
+            cachedBlockInfoByMessageID = visibleUpdated
         }
 
         let newestStreamingMessageID = visible.last(where: { $0.isStreaming })?.id
