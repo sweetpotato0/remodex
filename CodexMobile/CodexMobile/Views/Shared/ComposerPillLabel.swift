@@ -71,8 +71,8 @@ struct ComposerPillLabel: View {
         ComposerPillLabel(
             title: "main",
             iconSystemName: "remodex.git-branch",
-            titleFont: AppFont.mono(.subheadline),
-            titleWeight: .medium
+            titleFont: AppFont.subheadline(),
+            showsTrailingChevron: false
         )
     }
     .padding()

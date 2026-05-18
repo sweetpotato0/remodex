@@ -1308,6 +1308,10 @@ final class TurnViewModel {
 
         subscriptions?.consumeFreeSendAttemptIfNeeded()
         isSending = true
+        isPlanModeArmed = false
+        shouldAnchorToAssistantResponse = true
+        clearComposer()
+
         Task { @MainActor in
             defer { isSending = false }
 
@@ -1324,8 +1328,6 @@ final class TurnViewModel {
 
             if queuePaused, let queuedDraft {
                 appendQueuedDraft(queuedDraft, codex: codex, threadID: threadID)
-                shouldAnchorToAssistantResponse = true
-                clearComposer()
                 clearLocalDraft(codex: codex, threadID: threadID, persistToDisk: true)
 
                 resumeQueueAndFlushIfPossible(codex: codex, threadID: threadID)
@@ -1355,6 +1357,9 @@ final class TurnViewModel {
 
         subscriptions?.consumeFreeSendAttemptIfNeeded()
         isSending = true
+        isPlanModeArmed = false
+        shouldAnchorToAssistantResponse = true
+        clearComposer()
 
         Task { @MainActor in
             defer { isSending = false }
@@ -1362,12 +1367,9 @@ final class TurnViewModel {
             do {
                 let thread = try await codex.startThreadIfReady(preferredProjectPath: preferredProjectPath)
                 onThreadCreated(thread)
-                isPlanModeArmed = false
-                shouldAnchorToAssistantResponse = true
 
                 do {
                     try await dispatchPendingSend(pendingSend, codex: codex, threadID: thread.id)
-                    clearComposer()
                     clearLocalDraft(codex: codex, threadID: draftThreadID, persistToDisk: true)
                     clearLocalDraft(codex: codex, threadID: thread.id, persistToDisk: true)
                 } catch {
@@ -2338,20 +2340,15 @@ final class TurnViewModel {
         isPlanModeArmed = false
         shouldAnchorToAssistantResponse = true
         appendQueuedDraft(queuedDraft, codex: codex, threadID: threadID)
-        clearComposer()
         clearLocalDraft(codex: codex, threadID: threadID, persistToDisk: true)
     }
 
-    // Sends the prepared payload and restores the exact raw composer state if startTurn fails.
+    // Sends the already-cleared composer payload and restores exact raw state if startTurn fails.
     private func performTurnSend(
         _ pendingSend: PendingTurnSend,
         codex: CodexService,
         threadID: String
     ) async {
-        isPlanModeArmed = false
-        shouldAnchorToAssistantResponse = true
-        clearComposer()
-
         do {
             try await dispatchPendingSend(pendingSend, codex: codex, threadID: threadID)
             clearLocalDraft(codex: codex, threadID: threadID, persistToDisk: true)

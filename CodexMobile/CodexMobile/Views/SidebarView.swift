@@ -554,16 +554,6 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
                         .padding(.horizontal, 16)
                         .padding(.bottom, 8)
 
-                    if SidebarThreadsLoadingPresentation.shouldShowInlineStatus(
-                        isLoadingThreads: codex.isLoadingThreads,
-                        threadCount: codex.threads.count
-                    ) {
-                        SidebarThreadsInlineLoadingView()
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 8)
-                            .transition(.opacity)
-                    }
-
                     threadList
                 }
             }
@@ -663,17 +653,27 @@ struct SidebarView<ConnectionEmptyStatePanel: View, ConnectionEmptyStateFooter: 
         }
     }
 
-    // Pairs the Projects/Chats chips with a trailing bulk folder control so the
-    // button stays visually anchored to the scope it affects.
+    // Keeps transient sync feedback inside the scope row so list fetches do not
+    // add a separate row and shift the chat list vertically.
     private var sidebarScopeRow: some View {
         let projectGroupIDs = visibleProjectGroupIDs
         let shouldShowToggle = selectedContentScope == .projects && !projectGroupIDs.isEmpty
         let areAllCollapsed = areAllProjectFoldersCollapsed(projectGroupIDs)
+        let shouldShowSyncStatus = SidebarThreadsLoadingPresentation.shouldShowInlineStatus(
+            isLoadingThreads: codex.isLoadingThreads,
+            threadCount: codex.threads.count
+        )
 
         return HStack(spacing: 12) {
-            SidebarContentScopePicker(selection: $selectedContentScope)
+            if shouldShowSyncStatus {
+                SidebarThreadsInlineLoadingView()
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+            } else {
+                SidebarContentScopePicker(selection: $selectedContentScope)
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+            }
 
-            if shouldShowToggle {
+            if shouldShowToggle && !shouldShowSyncStatus {
                 SidebarFolderExpansionToggleButton(
                     areAllFoldersCollapsed: areAllCollapsed,
                     action: { toggleAllProjectFolders(projectGroupIDs) }
@@ -790,14 +790,22 @@ private struct SidebarThreadsInlineLoadingView: View {
         HStack(spacing: 8) {
             ProgressView()
                 .controlSize(.small)
+                .scaleEffect(0.76)
+                .frame(width: 12, height: 12)
             Text("Syncing chats")
-                .font(AppFont.caption())
-                .foregroundStyle(.secondary)
-            Spacer(minLength: 0)
+                .font(AppFont.callout(weight: .medium))
+                .foregroundStyle(Color.primary)
+                .lineLimit(1)
         }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 10)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .adaptiveGlass(
+            .regular,
+            isInteractive: false,
+            fallbackMaterial: .ultraThinMaterial,
+            in: Capsule(style: .continuous)
+        )
+        .accessibilityLabel("Syncing chats")
     }
 }
 

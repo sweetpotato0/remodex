@@ -14,6 +14,7 @@ struct TurnTimelineView<EmptyState: View, Composer: View>: View {
     let timelineChangeToken: Int
     let activeTurnID: String?
     let isThreadRunning: Bool
+    let isSendInFlight: Bool
     let latestTurnTerminalState: CodexTurnTerminalState?
     let completedTurnIDs: Set<String>
     let stoppedTurnIDs: Set<String>
@@ -219,7 +220,7 @@ struct TurnTimelineView<EmptyState: View, Composer: View>: View {
                                 || isRetryingEarlierHistoryLoad,
                             earlierMessagesErrorMessage: olderHistoryLoadErrorMessage,
                             renderItems: visibleRenderItems,
-                            isThreadRunning: isThreadRunning,
+                            showsPendingAssistantIndicator: isThreadRunning || isSendInFlight,
                             isRetryAvailable: isRetryAvailable,
                             cachedBlockInfoByMessageID: cachedBlockInfoByMessageID,
                             planSessionSource: planSessionSource,
@@ -426,15 +427,19 @@ struct TurnTimelineView<EmptyState: View, Composer: View>: View {
     }
 
     private var shouldShowPendingAssistantResponse: Bool {
-        shouldAnchorToAssistantResponse
-            && messages.last?.role == .user
+        TurnTimelinePendingAssistantState.isWaitingForAssistantResponse(
+            shouldAnchorToAssistantResponse: shouldAnchorToAssistantResponse,
+            messages: messages
+        )
     }
 
-    // New sends stay static while waiting for the assistant anchor; geometry tracking resumes after anchoring.
+    // Scroll geometry resumes after the optimistic send gap and assistant anchor settle.
     private var shouldTrackScrollGeometry: Bool {
-        !shouldAnchorToAssistantResponse
-            && autoScrollMode != .anchorAssistantResponse
-            && !shouldShowPendingAssistantResponse
+        TurnTimelinePendingAssistantState.shouldTrackScrollGeometry(
+            shouldAnchorToAssistantResponse: shouldAnchorToAssistantResponse,
+            autoScrollMode: autoScrollMode,
+            isWaitingForAssistantResponse: shouldShowPendingAssistantResponse
+        )
     }
 
     private func handleLoadEarlierMessages() {
