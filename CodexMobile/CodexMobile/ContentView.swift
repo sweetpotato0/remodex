@@ -22,6 +22,7 @@ private enum RootSheetRoute: Identifiable, Equatable {
 }
 
 enum ContentNavigationRoute: Hashable {
+    case newChatDraft(NewChatDraftRoute)
     case newChatOpening
     case thread(id: String)
     case settings
@@ -67,7 +68,9 @@ struct ContentView: View {
     @State private var lastSidebarGestureLogBucket: Int?
     @State private var sidebarGestureAutoCommitted = false
     @State private var sidebarSelectionSuppressedUntil: Date?
+    @State private var activeNewChatDraftRoute: NewChatDraftRoute?
     @State private var isOpeningNewChatFromSidebar = false
+    @State private var threadIDsPendingInitialAssistantAnchor: Set<String> = []
     // Settings is presented as a `fullScreenCover` instead of being pushed
     // onto `navigationPath` so the gear button works even when the sidebar
     // header is hosted inside an iOS 26 `safeAreaBar`, whose Liquid Glass
@@ -495,6 +498,8 @@ struct ContentView: View {
     @ViewBuilder
     private func navigationDestination(for route: ContentNavigationRoute) -> some View {
         switch route {
+        case .newChatDraft(let draftRoute):
+            newChatDraftDestination(route: draftRoute)
         case .newChatOpening:
             NewChatOpeningStateView()
         case .thread(let threadID):
@@ -539,6 +544,9 @@ struct ContentView: View {
             },
             onOpenTerminal: {
                 openTerminalFromSidebar(preferredWorkingDirectory: nil)
+            },
+            onOpenNewChatDraft: { source, preferredProjectPath in
+                openNewChatDraftFromSidebar(source: source, preferredProjectPath: preferredProjectPath)
             },
             onNewChatCreationStateChange: { isCreating in
                 setNewChatOpeningState(isCreating)
@@ -605,6 +613,21 @@ struct ContentView: View {
     }
 
     @ViewBuilder
+    private func newChatDraftDestination(route: NewChatDraftRoute) -> some View {
+        NewChatDraftView(
+            route: route,
+            leadingControl: .back,
+            onOpenTerminal: { workingDirectory in
+                openTerminal(preferredWorkingDirectory: workingDirectory)
+            },
+            onOpenThread: { thread in
+                openThreadFromNewChatDraft(thread)
+            }
+        )
+        .adaptiveNavigationBar()
+    }
+
+    @ViewBuilder
     private func nativeThreadDestination(threadID: String) -> some View {
         if isOpeningNewChatFromSidebar {
             NewChatOpeningStateView()
@@ -614,6 +637,10 @@ struct ContentView: View {
             TurnView(
                 thread: thread,
                 isWakingMacDisplayRecovery: isWakingSavedMacDisplay,
+                initialShouldAnchorToAssistantResponse: threadIDsPendingInitialAssistantAnchor.contains(thread.id),
+                onInitialAssistantAnchorConsumed: {
+                    threadIDsPendingInitialAssistantAnchor.remove(thread.id)
+                },
                 onOpenTerminal: { workingDirectory in
                     openTerminal(preferredWorkingDirectory: workingDirectory)
                 }
@@ -654,7 +681,19 @@ struct ContentView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if isOpeningNewChatFromSidebar {
+        if let activeNewChatDraftRoute {
+            NewChatDraftView(
+                route: activeNewChatDraftRoute,
+                leadingControl: .hamburger(action: { openSidebarPresentation() }),
+                onOpenTerminal: { workingDirectory in
+                    openTerminal(preferredWorkingDirectory: workingDirectory)
+                },
+                onOpenThread: { thread in
+                    openThreadFromNewChatDraft(thread)
+                }
+            )
+            .id(activeNewChatDraftRoute.id)
+        } else if isOpeningNewChatFromSidebar {
             NewChatOpeningStateView()
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
@@ -665,6 +704,10 @@ struct ContentView: View {
             TurnView(
                 thread: thread,
                 isWakingMacDisplayRecovery: isWakingSavedMacDisplay,
+                initialShouldAnchorToAssistantResponse: threadIDsPendingInitialAssistantAnchor.contains(thread.id),
+                onInitialAssistantAnchorConsumed: {
+                    threadIDsPendingInitialAssistantAnchor.remove(thread.id)
+                },
                 onOpenTerminal: { workingDirectory in
                     openTerminal(preferredWorkingDirectory: workingDirectory)
                 }
@@ -1021,6 +1064,7 @@ struct ContentView: View {
             return
         }
 
+        activeNewChatDraftRoute = nil
         isOpeningNewChatFromSidebar = false
         if isSidebarOpen || sidebarDragOffset > 0 {
             closeSidebar()
@@ -1047,6 +1091,50 @@ struct ContentView: View {
             }
 
             codex.requestImmediateActiveThreadSync(threadId: thread.id)
+        }
+    }
+
+    // Keeps sidebar chat creation compose-first while preserving which affordance
+    // opened it, so the draft UI can distinguish general Chat from folder Chat.
+    private func openNewChatDraftFromSidebar(
+        source: NewChatDraftSource,
+        preferredProjectPath: String?
+    ) {
+        let route = NewChatDraftRoute(
+            id: "new-chat-draft-\(UUID().uuidString)",
+            preferredProjectPath: preferredProjectPath,
+            source: source
+        )
+        isOpeningNewChatFromSidebar = false
+        selectedThread = nil
+        codex.activeThreadId = nil
+
+        if shouldPresentSidebarAsNavigation {
+            activeNewChatDraftRoute = nil
+            navigationPath = [.newChatDraft(route)]
+        } else {
+            activeNewChatDraftRoute = route
+            if isSidebarOpen || sidebarDragOffset > 0 {
+                closeSidebar()
+            }
+        }
+    }
+
+    private func openThreadFromNewChatDraft(_ thread: CodexThread) {
+        isOpeningNewChatFromSidebar = false
+        threadIDsPendingInitialAssistantAnchor.insert(thread.id)
+        selectedThread = thread
+        codex.activeThreadId = thread.id
+        codex.markThreadAsViewed(thread.id)
+
+        if shouldPresentSidebarAsNavigation {
+            Task { @MainActor in
+                await Task.yield()
+                guard selectedThread?.id == thread.id else { return }
+                navigationPath = [.thread(id: thread.id)]
+            }
+        } else {
+            activeNewChatDraftRoute = nil
         }
     }
 
@@ -1100,6 +1188,7 @@ struct ContentView: View {
     private func setNewChatOpeningState(_ isOpening: Bool) {
         isOpeningNewChatFromSidebar = isOpening
         if isOpening {
+            activeNewChatDraftRoute = nil
             selectedThread = nil
             codex.activeThreadId = nil
             if shouldPresentSidebarAsNavigation {

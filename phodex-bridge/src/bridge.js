@@ -308,7 +308,15 @@ function startBridge({
   }
 
   function stopBridge() {
+    if (isShuttingDown) {
+      return;
+    }
+
     prepareBridgeShutdown();
+    desktopRefresher.handleTransportReset();
+    failBridgeManagedCodexRequests(new Error("Bridge stopped before the request completed."));
+    forwardedRequestMethodsById.clear();
+
     if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) {
       socket.close();
     }

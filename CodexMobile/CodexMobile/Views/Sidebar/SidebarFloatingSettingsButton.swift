@@ -31,7 +31,7 @@ struct SidebarFloatingSettingsButton: View {
     var body: some View {
         SidebarFloatingCircleButton(
             colorScheme: colorScheme,
-            systemImage: "gearshape.fill",
+            systemImage: "gearshape",
             accessibilityLabel: "Settings",
             action: action
         )
