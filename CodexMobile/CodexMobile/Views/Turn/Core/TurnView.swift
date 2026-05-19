@@ -53,6 +53,7 @@ struct TurnView: View {
     @State private var isShowingVoiceSetupSheet = false
     @State private var hasConsumedInitialAssistantAnchor = false
     @StateObject private var voiceTranscriptionManager = GPTVoiceTranscriptionManager()
+    @State private var workspaceFilePreviewRequest: WorkspaceFilePreviewRequest?
 
     init(
         thread: CodexThread,
@@ -209,6 +210,16 @@ struct TurnView: View {
                     viewModel.clearComposerAutocomplete()
                 }
             )
+        .environment(\.openURL, OpenURLAction { url in
+            guard let path = WorkspaceFileLinkResolver.localPath(from: url) else {
+                return .systemAction
+            }
+            workspaceFilePreviewRequest = WorkspaceFilePreviewRequest(
+                path: path,
+                currentWorkingDirectory: gitWorkingDirectory
+            )
+            return .handled
+        })
         .environment(\.inlineCommitAndPushAction, showsGitControls ? {
             viewModel.inlineCommitAndPush(
                 codex: codex,
@@ -315,6 +326,12 @@ struct TurnView: View {
                 viewModel.enqueueCapturedImageData(data, codex: codex, threadID: thread.id)
             }
             .ignoresSafeArea()
+        }
+        .fullScreenCover(item: $workspaceFilePreviewRequest) { request in
+            WorkspaceLinkedFilePreviewScreen(
+                request: request,
+                onDismiss: { workspaceFilePreviewRequest = nil }
+            )
         }
         .photosPicker(
             isPresented: isPhotoPickerPresentedBinding,
