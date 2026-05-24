@@ -2424,6 +2424,13 @@ function augmentRelayHistoryTurnsWithJsonlArtifacts(turns, threadId = "") {
       nextItems = nextItems === items ? [...items] : nextItems;
       nextItems.push(artifacts.fileChangeItem);
     }
+    for (const imageViewItem of artifacts.imageViewItems || []) {
+      if (hasEquivalentImageViewItem(nextItems, imageViewItem)) {
+        continue;
+      }
+      nextItems = nextItems === items ? [...items] : nextItems;
+      nextItems.push(imageViewItem);
+    }
     if (artifacts.progressPlanItem && !hasEquivalentProgressPlanItem(nextItems, artifacts.progressPlanItem)) {
       nextItems = nextItems === items ? [...items] : nextItems;
       nextItems.push(artifacts.progressPlanItem);
@@ -2527,6 +2534,7 @@ function readAndCacheJsonlArtifactItems(cacheKey, rolloutPath, threadId, stat = 
       ));
       const artifacts = {
         fileChangeItem: null,
+        imageViewItems: [],
         progressPlanItem: null,
       };
 
@@ -2551,8 +2559,14 @@ function readAndCacheJsonlArtifactItems(cacheKey, rolloutPath, threadId, stat = 
           id: normalizeNonEmptyString(progressPlan.id) || `remodex-jsonl-progress-plan-${turnId}`,
         };
       }
+      artifacts.imageViewItems = turnItems
+        .filter((item) => normalizeHistoryItemToken(item?.type) === "imageview")
+        .map((item, index) => ({
+          ...item,
+          id: normalizeNonEmptyString(item.id) || `remodex-jsonl-image-view-${turnId}-${index + 1}`,
+        }));
 
-      if (artifacts.fileChangeItem || artifacts.progressPlanItem) {
+      if (artifacts.fileChangeItem || artifacts.progressPlanItem || artifacts.imageViewItems.length > 0) {
         artifactsByTurnId.set(turnId, artifacts);
       }
     }
@@ -2626,6 +2640,29 @@ function hasEquivalentProgressPlanItem(items, incomingItem) {
     return item.remodexJsonlProgressPlan === true
       || (incomingId && normalizeNonEmptyString(item.id) === incomingId);
   });
+}
+
+function hasEquivalentImageViewItem(items, incomingItem) {
+  const incomingId = normalizeNonEmptyString(incomingItem?.id);
+  const incomingPath = normalizeImageViewPathKey(incomingItem);
+  return items.some((item) => {
+    if (normalizeHistoryItemToken(item?.type) !== "imageview") {
+      return false;
+    }
+    const itemId = normalizeNonEmptyString(item.id);
+    if (incomingId && itemId === incomingId) {
+      return true;
+    }
+    return incomingPath && normalizeImageViewPathKey(item) === incomingPath;
+  });
+}
+
+function normalizeImageViewPathKey(item) {
+  return normalizeNonEmptyString(item?.path)
+    || normalizeNonEmptyString(item?.saved_path)
+    || normalizeNonEmptyString(item?.savedPath)
+    || normalizeNonEmptyString(item?.file_path)
+    || normalizeNonEmptyString(item?.filePath);
 }
 
 function fileChangePathSet(item) {

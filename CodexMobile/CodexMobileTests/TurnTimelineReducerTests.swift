@@ -3442,6 +3442,7 @@ final class TurnTimelineReducerTests: XCTestCase {
         )
 
         XCTAssertNil(blockInfo[0]?.copyText)
+        XCTAssertEqual(blockInfo[0]?.allowsCopy, true)
         XCTAssertNil(blockInfo[2]?.copyText)
         XCTAssertEqual(blockInfo[2]?.allowsCopy, false)
         XCTAssertEqual(blockInfo[2]?.showsRunningIndicator, true)
@@ -3475,6 +3476,43 @@ final class TurnTimelineReducerTests: XCTestCase {
         )
 
         XCTAssertEqual(blockInfo, [nil])
+    }
+
+    func testAssistantBlockInfoKeepsPreviousCopyWhileNextRunIsStarting() {
+        let now = Date()
+        let messages = [
+            makeMessage(
+                id: "assistant-1",
+                threadID: "thread",
+                role: .assistant,
+                kind: .chat,
+                text: "Previous settled response",
+                createdAt: now,
+                turnID: "turn-1"
+            ),
+            makeMessage(
+                id: "user-2",
+                threadID: "thread",
+                role: .user,
+                kind: .chat,
+                text: "Next request",
+                createdAt: now.addingTimeInterval(1),
+                turnID: "turn-2"
+            ),
+        ]
+
+        let blockInfo = TurnTimelineView<EmptyView, EmptyView>.assistantBlockInfo(
+            for: messages,
+            activeTurnID: nil,
+            isThreadRunning: false,
+            isCopySuppressedByRunState: true,
+            latestTurnTerminalState: nil,
+            stoppedTurnIDs: []
+        )
+
+        XCTAssertNil(blockInfo[0]?.copyText)
+        XCTAssertEqual(blockInfo[0]?.allowsCopy, true)
+        XCTAssertNil(blockInfo[1])
     }
 
     func testRunningAccessoryRehomesFromSkippedThinkingPlaceholder() {

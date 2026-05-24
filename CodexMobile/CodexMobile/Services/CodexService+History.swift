@@ -466,13 +466,14 @@ extension CodexService {
             guard let object = value.objectValue else { continue }
             let rawType = object["type"]?.stringValue ?? ""
             let normalizedType = normalizedItemType(rawType)
-            guard normalizedType == "image" || normalizedType == "localimage" else {
+            guard normalizedType == "image"
+                    || normalizedType == "localimage"
+                    || normalizedType == "inputimage"
+                    || normalizedType == "outputimage" else {
                 continue
             }
 
-            let sourceURL = object["url"]?.stringValue
-                ?? object["image_url"]?.stringValue
-                ?? object["path"]?.stringValue
+            let sourceURL = decodeImageAttachmentSourceURL(from: object)
             let payloadDataURL: String?
             if let sourceURL, sourceURL.lowercased().hasPrefix("data:image") {
                 payloadDataURL = sourceURL
@@ -500,6 +501,14 @@ extension CodexService {
         }
 
         return attachments
+    }
+
+    func decodeImageAttachmentSourceURL(from object: [String: JSONValue]) -> String? {
+        decodeHistoryFirstString(
+            forAnyKey: ["url", "image_url", "imageUrl", "path"],
+            in: .object(object),
+            maxDepth: 4
+        )
     }
 
     func mergeHistoryMessages(_ existing: [CodexMessage], _ history: [CodexMessage]) -> [CodexMessage] {
@@ -2590,6 +2599,7 @@ extension CodexService {
                 "new file mode 100644",
                 "--- /dev/null",
                 "+++ b/\(path)",
+                "@@ -0,0 +1,\(contentLines.count) @@",
             ]
             lines.append(contentsOf: contentLines.map { "+\($0)" })
             return lines.joined(separator: "\n")
@@ -2601,6 +2611,7 @@ extension CodexService {
                 "deleted file mode 100644",
                 "--- a/\(path)",
                 "+++ /dev/null",
+                "@@ -1,\(contentLines.count) +0,0 @@",
             ]
             lines.append(contentsOf: contentLines.map { "-\($0)" })
             return lines.joined(separator: "\n")

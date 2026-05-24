@@ -441,6 +441,58 @@ test("parseSessionJsonlTurns adds readable messages for generic tool calls", () 
   ]);
 });
 
+test("parseSessionJsonlTurns restores view_image tool output as imageView without inline data", () => {
+  const content = [
+    JSON.stringify({
+      timestamp: "2026-05-22T14:52:03.000Z",
+      type: "event_msg",
+      payload: {
+        type: "task_started",
+        turn_id: "turn-view-image",
+      },
+    }),
+    JSON.stringify({
+      timestamp: "2026-05-22T14:52:04.000Z",
+      type: "response_item",
+      payload: {
+        type: "function_call",
+        name: "view_image",
+        call_id: "call-view-image",
+        arguments: JSON.stringify({
+          path: "/Users/test/Library/Application Support/CleanShot/media/screenshot.png",
+        }),
+      },
+    }),
+    JSON.stringify({
+      timestamp: "2026-05-22T14:52:05.000Z",
+      type: "response_item",
+      payload: {
+        type: "function_call_output",
+        call_id: "call-view-image",
+        output: [
+          {
+            type: "input_image",
+            image_url: "data:image/png;base64,AAAA",
+          },
+        ],
+      },
+    }),
+  ].join("\n");
+
+  const turns = parseSessionJsonlTurns(content, { threadId: "thread-view-image" });
+
+  assert.equal(turns.length, 1);
+  assert.equal(turns[0].items.length, 2);
+  assert.deepEqual(turns[0].items.map((item) => item.type), ["tool_call", "imageView"]);
+  assert.equal(turns[0].items[1].id, "call-view-image-image-view");
+  assert.equal(
+    turns[0].items[1].path,
+    "/Users/test/Library/Application Support/CleanShot/media/screenshot.png"
+  );
+  assert.equal(Object.hasOwn(turns[0].items[1], "output"), false);
+  assert.equal(turns[0].items[1].remodexJsonlToolOutputImage, true);
+});
+
 test("parseSessionJsonlTurns restores completed desktop Plan items without duplicating proposed_plan messages", () => {
   const content = [
     JSON.stringify({

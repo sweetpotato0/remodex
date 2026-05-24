@@ -296,6 +296,47 @@ final class CodexServiceIncomingCommandExecutionTests: XCTestCase {
         ])
     }
 
+    func testHistoryDecodesInputImageContentAsAttachment() {
+        let service = makeService()
+        let threadID = "thread-\(UUID().uuidString)"
+        let turnID = "turn-\(UUID().uuidString)"
+        let history = service.decodeMessagesFromThreadRead(
+            threadId: threadID,
+            threadObject: [
+                "createdAt": .string("2026-03-12T10:00:00Z"),
+                "turns": .array([
+                    .object([
+                        "id": .string(turnID),
+                        "items": .array([
+                            .object([
+                                "id": .string("user-image"),
+                                "type": .string("user_message"),
+                                "content": .array([
+                                    .object([
+                                        "type": .string("input_text"),
+                                        "text": .string("Look at this"),
+                                    ]),
+                                    .object([
+                                        "type": .string("input_image"),
+                                        "image_url": .object([
+                                            "url": .string("remodex://history-image-elided"),
+                                        ]),
+                                    ]),
+                                ]),
+                            ]),
+                        ]),
+                    ]),
+                ]),
+            ]
+        )
+
+        XCTAssertEqual(history.count, 1)
+        XCTAssertEqual(history[0].role, .user)
+        XCTAssertEqual(history[0].text, "Look at this")
+        XCTAssertEqual(history[0].attachments.count, 1)
+        XCTAssertEqual(history[0].attachments[0].sourceURL, "remodex://history-image-elided")
+    }
+
     func testHistoryDecodesNumericStringMicrosecondTimestamps() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"

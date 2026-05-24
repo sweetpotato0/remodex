@@ -1361,6 +1361,98 @@ test("sanitizeThreadHistoryImagesForRelay restores JSONL update_plan as progress
   ]);
 });
 
+test("sanitizeThreadHistoryImagesForRelay restores JSONL view_image output previews", (t) => {
+  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), "remodex-history-jsonl-image-"));
+  const previousCodexHome = process.env.CODEX_HOME;
+  process.env.CODEX_HOME = codexHome;
+  t.after(() => {
+    if (previousCodexHome == null) {
+      delete process.env.CODEX_HOME;
+    } else {
+      process.env.CODEX_HOME = previousCodexHome;
+    }
+    fs.rmSync(codexHome, { recursive: true, force: true });
+  });
+
+  const threadId = "thread-jsonl-image";
+  const turnId = "turn-jsonl-image";
+  const imagePath = "/Users/test/Library/Application Support/CleanShot/media/screenshot.png";
+  const sessionsDir = path.join(codexHome, "sessions", "2026", "05", "19");
+  fs.mkdirSync(sessionsDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(sessionsDir, `rollout-2026-05-19T19-42-00-${threadId}.jsonl`),
+    [
+      JSON.stringify({
+        type: "session_meta",
+        payload: { id: threadId },
+      }),
+      JSON.stringify({
+        type: "event_msg",
+        payload: {
+          type: "task_started",
+          turn_id: turnId,
+        },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        payload: {
+          type: "function_call",
+          name: "view_image",
+          call_id: "call-jsonl-image",
+          arguments: JSON.stringify({ path: imagePath }),
+        },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        payload: {
+          type: "function_call_output",
+          call_id: "call-jsonl-image",
+          output: [
+            {
+              type: "input_image",
+              image_url: "data:image/png;base64,AAAA",
+            },
+          ],
+        },
+      }),
+    ].join("\n"),
+    "utf8"
+  );
+
+  const rawMessage = JSON.stringify({
+    id: "req-thread-jsonl-image",
+    result: {
+      thread: {
+        id: threadId,
+        turns: [
+          {
+            id: turnId,
+            items: [
+              {
+                id: "assistant-jsonl-image",
+                type: "message",
+                role: "assistant",
+                content: [{ type: "output_text", text: "I opened it." }],
+              },
+            ],
+          },
+        ],
+      },
+    },
+  });
+
+  const sanitized = JSON.parse(
+    sanitizeThreadHistoryImagesForRelay(rawMessage, "thread/read")
+  );
+  const items = sanitized.result.thread.turns[0].items;
+
+  assert.equal(items.length, 2);
+  assert.equal(items[1].type, "imageView");
+  assert.equal(items[1].path, imagePath);
+  assert.equal(items[1].remodexJsonlToolOutputImage, true);
+  assert.equal(Object.hasOwn(items[1], "output"), false);
+});
+
 test("sanitizeThreadHistoryImagesForRelay restores JSONL cwd without file changes", (t) => {
   const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), "remodex-history-cwd-"));
   const previousCodexHome = process.env.CODEX_HOME;

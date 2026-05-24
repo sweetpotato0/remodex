@@ -271,18 +271,13 @@ extension CodexService {
         )
         let normalizedPreAppendedUserMessageID = normalizedInterruptIdentifier(preAppendedUserMessageID)
         let shouldAppendOnContinuation = shouldAppendUserMessage || normalizedPreAppendedUserMessageID != nil
-        let preResumeTitleSeed: String?
-        if let automaticTitleSeedOverride {
-            preResumeTitleSeed = automaticTitleSeedOverride
-        } else if shouldAppendUserMessage && normalizedPreAppendedUserMessageID == nil {
-            preResumeTitleSeed = automaticThreadTitleSeedIfNeeded(
-                userInput: outgoingDisplayText,
-                attachments: attachments,
-                threadId: initialThreadId
-            )
-        } else {
-            preResumeTitleSeed = nil
-        }
+        let preResumeTitleSeed = resolvedAutomaticThreadTitleSeed(
+            override: automaticTitleSeedOverride,
+            shouldEvaluate: shouldAppendUserMessage && normalizedPreAppendedUserMessageID == nil,
+            userInput: outgoingDisplayText,
+            attachments: attachments,
+            threadId: initialThreadId
+        )
         // Put the user's bubble in the timeline before any resume/network work so
         // sends feel instant while the runtime catches up in the background.
         let preResumePendingMessageId: String
@@ -406,7 +401,9 @@ extension CodexService {
             skillMentions: skillMentions,
             mentionMentions: mentionMentions
         )
-        let automaticTitleSeed = automaticThreadTitleSeedIfNeeded(
+        let automaticTitleSeed = resolvedAutomaticThreadTitleSeed(
+            override: nil,
+            shouldEvaluate: true,
             userInput: outgoingDisplayText,
             attachments: attachments,
             threadId: normalizedThreadID
@@ -458,6 +455,13 @@ extension CodexService {
         }
 
         let sourceMessage = sourceMessages.remove(at: sourceIndex)
+        let automaticTitleSeed = resolvedAutomaticThreadTitleSeed(
+            override: preAppendedMessage.automaticTitleSeed,
+            shouldEvaluate: true,
+            userInput: sourceMessage.text,
+            attachments: sourceMessage.attachments,
+            threadId: normalizedTargetThreadID
+        )
         let movedMessage = CodexMessage(
             id: sourceMessage.id,
             threadId: normalizedTargetThreadID,
@@ -498,7 +502,10 @@ extension CodexService {
         persistMessages()
         updateCurrentOutput(for: normalizedSourceThreadID)
         updateCurrentOutput(for: normalizedTargetThreadID)
-        return preAppendedMessage
+        return CodexPreAppendedTurnMessage(
+            messageID: messageID,
+            automaticTitleSeed: automaticTitleSeed
+        )
     }
 
     // Removes the optimistic row by id first because structured mention-only rows may not match raw composer text.
@@ -1409,13 +1416,13 @@ extension CodexService {
             skillMentions: skillMentions,
             mentionMentions: mentionMentions
         )
-        let automaticTitleSeed = automaticTitleSeedOverride ?? (shouldAppendUserMessage
-            ? automaticThreadTitleSeedIfNeeded(
-                userInput: outgoingDisplayText,
-                attachments: attachments,
-                threadId: threadId
-            )
-            : nil)
+        let automaticTitleSeed = resolvedAutomaticThreadTitleSeed(
+            override: automaticTitleSeedOverride,
+            shouldEvaluate: shouldAppendUserMessage,
+            userInput: outgoingDisplayText,
+            attachments: attachments,
+            threadId: threadId
+        )
         let pendingMessageId: String
         if let preAppendedUserMessageID,
            !preAppendedUserMessageID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -1640,6 +1647,28 @@ extension CodexService {
         } catch {
             return nil
         }
+    }
+
+    // Centralizes first-message title seeding so optimistic rows, moved draft rows,
+    // and direct turn starts all preserve the same overwrite rules.
+    private func resolvedAutomaticThreadTitleSeed(
+        override: String?,
+        shouldEvaluate: Bool,
+        userInput: String,
+        attachments: [CodexImageAttachment],
+        threadId: String
+    ) -> String? {
+        if let override {
+            return override
+        }
+        guard shouldEvaluate else {
+            return nil
+        }
+        return automaticThreadTitleSeedIfNeeded(
+            userInput: userInput,
+            attachments: attachments,
+            threadId: threadId
+        )
     }
 
     private func automaticThreadTitleSeedIfNeeded(

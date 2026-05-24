@@ -78,6 +78,7 @@ function parseSessionJsonlTurns(content, { threadId = "" } = {}) {
   let sessionThreadId = normalizeString(threadId);
   let sessionCwd = "";
   const skippedCallIds = new Set();
+  const toolCallsByCallId = new Map();
   const pendingUserMessages = [];
 
   const lines = String(content || "").split(/\r?\n/);
@@ -144,6 +145,7 @@ function parseSessionJsonlTurns(content, { threadId = "" } = {}) {
         );
         const item = normalizeResponseItemForHistory(completedItem, index + 1, {
           cwd: sessionCwd,
+          toolCallsByCallId,
         });
         if (item) {
           turn.items.push(item);
@@ -189,6 +191,7 @@ function parseSessionJsonlTurns(content, { threadId = "" } = {}) {
       if (!payload) {
         continue;
       }
+      rememberToolCallForHistory(payload, toolCallsByCallId);
       if (shouldSkipResponseItemForHistory(payload, skippedCallIds)) {
         continue;
       }
@@ -201,6 +204,7 @@ function parseSessionJsonlTurns(content, { threadId = "" } = {}) {
       );
       const item = normalizeResponseItemForHistory(payload, index + 1, {
         cwd: sessionCwd,
+        toolCallsByCallId,
       });
       if (item) {
         if (shouldSkipDuplicateProposedPlanMessage(turn, item)) {
@@ -262,7 +266,7 @@ function ensureTurn(turns, turnsById, turnId, threadId, timestamp) {
   return turn;
 }
 
-function normalizeResponseItemForHistory(payload, lineNumber, { cwd = "" } = {}) {
+function normalizeResponseItemForHistory(payload, lineNumber, { cwd = "", toolCallsByCallId = new Map() } = {}) {
   const type = normalizeHistoryItemType(payload.type);
   if (!type) {
     return null;
@@ -276,6 +280,13 @@ function normalizeResponseItemForHistory(payload, lineNumber, { cwd = "" } = {})
   const applyPatchItem = normalizeApplyPatchItemForHistory(payload, lineNumber, { cwd });
   if (applyPatchItem) {
     return applyPatchItem;
+  }
+
+  const toolOutputImageViewItem = normalizeToolOutputImageViewItemForHistory(payload, lineNumber, {
+    toolCallsByCallId,
+  });
+  if (toolOutputImageViewItem) {
+    return toolOutputImageViewItem;
   }
 
   const readableToolItem = normalizeReadableToolItemForHistory(payload, lineNumber, { cwd });
@@ -297,6 +308,37 @@ function normalizeResponseItemForHistory(payload, lineNumber, { cwd = "" } = {})
   }
 
   return item;
+}
+
+// Converts `view_image` tool output blobs into a lightweight local image reference.
+function normalizeToolOutputImageViewItemForHistory(payload, lineNumber, { toolCallsByCallId = new Map() } = {}) {
+  const type = normalizeHistoryItemType(payload.type);
+  if (normalizeHistoryToken(type) !== "toolcalloutput") {
+    return null;
+  }
+
+  const callId = normalizeString(payload.call_id)
+    || normalizeString(payload.callId)
+    || normalizeString(payload.id);
+  const toolCall = callId ? toolCallsByCallId.get(callId) : null;
+  if (!toolCall || normalizeString(toolCall.toolName).toLowerCase() !== "view_image") {
+    return null;
+  }
+
+  const imagePath = normalizeString(toolCall.imagePath);
+  if (!imagePath || !toolCallOutputContainsInlineImage(payload.output)) {
+    return null;
+  }
+
+  return {
+    id: `${callId || `tool-output-line-${lineNumber}`}-image-view`,
+    type: "imageView",
+    status: normalizeString(payload.status) || "completed",
+    path: imagePath,
+    call_id: callId || undefined,
+    tool_name: toolCall.toolName,
+    remodexJsonlToolOutputImage: true,
+  };
 }
 
 // Enriches raw tool-call JSONL records so mobile history can render useful rows.
@@ -351,6 +393,73 @@ function normalizeReadableToolItemForHistory(payload, lineNumber, { cwd = "" } =
     call_id: callId || undefined,
     tool_name: toolName,
   };
+}
+
+function rememberToolCallForHistory(payload, toolCallsByCallId) {
+  const typeToken = normalizeHistoryToken(normalizeHistoryItemType(payload?.type));
+  if (typeToken !== "toolcall" && typeToken !== "customtoolcall") {
+    return;
+  }
+
+  const callId = normalizeString(payload.call_id)
+    || normalizeString(payload.callId)
+    || normalizeString(payload.id);
+  const toolName = normalizeString(payload.name)
+    || normalizeString(payload.tool_name)
+    || normalizeString(payload.toolName);
+  if (!callId || !toolName) {
+    return;
+  }
+
+  const argumentsObject = parseToolArguments(
+    payload.arguments !== undefined ? payload.arguments : payload.input
+  );
+  toolCallsByCallId.set(callId, {
+    toolName,
+    imagePath: resolveToolImagePath(toolName, argumentsObject, payload),
+  });
+}
+
+function resolveToolImagePath(toolName, argumentsObject, payload) {
+  if (normalizeString(toolName).toLowerCase() !== "view_image") {
+    return "";
+  }
+
+  return firstNonEmptyString([
+    normalizeString(argumentsObject.path),
+    normalizeString(argumentsObject.filePath),
+    normalizeString(argumentsObject.file_path),
+    normalizeString(argumentsObject.localPath),
+    normalizeString(argumentsObject.local_path),
+    normalizeString(payload.path),
+    normalizeString(payload.filePath),
+    normalizeString(payload.file_path),
+    normalizeString(payload.localPath),
+    normalizeString(payload.local_path),
+  ]);
+}
+
+function toolCallOutputContainsInlineImage(rawOutput) {
+  const parsedOutput = typeof rawOutput === "string"
+    ? safeParseJSON(rawOutput) || rawOutput
+    : rawOutput;
+  return containsInlineImageDataURL(parsedOutput);
+}
+
+function containsInlineImageDataURL(value) {
+  if (typeof value === "string") {
+    return value.toLowerCase().startsWith("data:image");
+  }
+
+  if (Array.isArray(value)) {
+    return value.some(containsInlineImageDataURL);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.values(value).some(containsInlineImageDataURL);
+  }
+
+  return false;
 }
 
 function normalizeApplyPatchItemForHistory(payload, lineNumber, { cwd = "" } = {}) {
