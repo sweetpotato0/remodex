@@ -41,7 +41,7 @@ struct FileChangeInlineActionRow: View {
                     .truncationMode(.middle)
 
                 DiffCountsLabel(additions: entry.additions, deletions: entry.deletions)
-                    .font(AppFont.mono(.caption))
+                    .font(AppFont.subheadline())
             }
             .font(AppFont.body())
         }
@@ -92,7 +92,7 @@ struct FileChangeSummaryBox: View {
 
                                 if entry.additions > 0 || entry.deletions > 0 {
                                     DiffCountsLabel(additions: entry.additions, deletions: entry.deletions)
-                                        .font(AppFont.mono(.caption))
+                                        .font(AppFont.subheadline())
                                 }
                             }
                             .padding(.horizontal, 12)
@@ -162,7 +162,7 @@ struct FileChangeSummaryBox: View {
 
             if totalAdditions > 0 || totalDeletions > 0 {
                 DiffCountsLabel(additions: totalAdditions, deletions: totalDeletions)
-                    .font(AppFont.mono(.caption))
+                    .font(AppFont.subheadline())
             }
 
             Spacer(minLength: 8)

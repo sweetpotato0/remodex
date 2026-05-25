@@ -3407,6 +3407,12 @@ function compactHistoryItemForRelay(item, maxChars) {
     type: typeof item?.type === "string" ? item.type : "relay_truncated_item",
     role: typeof item?.role === "string" ? item.role : undefined,
     itemId: typeof item?.itemId === "string" ? item.itemId : undefined,
+    turnId: typeof item?.turnId === "string" ? item.turnId : undefined,
+    turn_id: typeof item?.turn_id === "string" ? item.turn_id : undefined,
+    createdAt: relayScalarHistoryMetadata(item?.createdAt),
+    created_at: relayScalarHistoryMetadata(item?.created_at),
+    timestamp: relayScalarHistoryMetadata(item?.timestamp),
+    time: relayScalarHistoryMetadata(item?.time),
     relayPayloadTruncated: true,
   };
   const tailText = maxChars > 0 ? firstRelayTextTail(item, maxChars) : "";
@@ -3417,6 +3423,10 @@ function compactHistoryItemForRelay(item, maxChars) {
   return Object.fromEntries(
     Object.entries(compactItem).filter(([, value]) => value !== undefined)
   );
+}
+
+function relayScalarHistoryMetadata(value) {
+  return typeof value === "string" || typeof value === "number" ? value : undefined;
 }
 
 function firstRelayTextTail(value, maxChars) {

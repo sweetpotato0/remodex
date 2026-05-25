@@ -482,6 +482,7 @@ private struct ComposerRuntimeMenuControl: View, Equatable {
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 4)
+        .fixedSize(horizontal: true, vertical: false)
         .frame(maxWidth: maxInlineRuntimeLabelWidth, alignment: .leading)
         .clipped()
         .contentShape(Rectangle())

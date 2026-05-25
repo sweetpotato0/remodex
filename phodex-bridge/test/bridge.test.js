@@ -2004,6 +2004,9 @@ test("sanitizeThreadHistoryImagesForRelay compacts oversized turns pages", () =>
             {
               id: "item-1",
               type: "assistant_message",
+              turnId: "turn-1",
+              createdAt: "2026-05-24T19:43:11.933Z",
+              timestamp: "2026-05-24T19:43:11.933Z",
               text: "B".repeat(4 * 1024 * 1024),
             },
           ],
@@ -2028,6 +2031,9 @@ test("sanitizeThreadHistoryImagesForRelay compacts oversized turns pages", () =>
   );
   assert.equal(sanitized.result.items[0].remodexPageCompactedForRelay, true);
   assert.equal(item.relayPayloadTruncated, true);
+  assert.equal(item.turnId, "turn-1");
+  assert.equal(item.createdAt, "2026-05-24T19:43:11.933Z");
+  assert.equal(item.timestamp, "2026-05-24T19:43:11.933Z");
   assert.equal(item.text.startsWith("…\n"), true);
   assert.equal(item.text.length < 120_000, true);
 });

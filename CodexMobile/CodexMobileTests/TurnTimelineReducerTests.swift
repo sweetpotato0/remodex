@@ -1440,6 +1440,63 @@ final class TurnTimelineReducerTests: XCTestCase {
         XCTAssertEqual(deduped.map(\.id), ["user-1", "user-2"])
     }
 
+    func testRemoveDuplicateUserMessagesCollapsesFallbackTimestampHistoryEcho() {
+        let now = Date(timeIntervalSince1970: 1_779_654_720)
+        let live = makeMessage(
+            id: "user-live",
+            threadID: "thread",
+            role: .user,
+            text: "Can you review this flow?",
+            createdAt: now,
+            turnID: "turn-1"
+        )
+        let historyEcho = makeMessage(
+            id: "user-history-echo",
+            threadID: "thread",
+            role: .user,
+            text: "Can you review this flow?",
+            createdAt: Date(timeIntervalSince1970: 10),
+            turnID: "turn-1"
+        )
+
+        let deduped = TurnTimelineReducer.removeDuplicateUserMessages(in: [live, historyEcho])
+
+        XCTAssertEqual(deduped.map(\.id), ["user-live"])
+        XCTAssertEqual(deduped[0].createdAt.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 0.001)
+
+        let reverseDeduped = TurnTimelineReducer.removeDuplicateUserMessages(in: [historyEcho, live])
+        XCTAssertEqual(reverseDeduped.count, 1)
+        XCTAssertEqual(reverseDeduped[0].createdAt.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 0.001)
+    }
+
+    func testRemoveDuplicateUserMessagesCollapsesRawSkillCommandEcho() {
+        let now = Date(timeIntervalSince1970: 1_779_654_720)
+        var rich = makeMessage(
+            id: "user-rich",
+            threadID: "thread",
+            role: .user,
+            text: "one last time",
+            createdAt: now,
+            turnID: "turn-1"
+        )
+        rich.skillMentions = ["check-code"]
+        let rawEcho = makeMessage(
+            id: "user-raw",
+            threadID: "thread",
+            role: .user,
+            text: "$check-code one last time",
+            createdAt: now.addingTimeInterval(1),
+            turnID: "turn-1"
+        )
+
+        let deduped = TurnTimelineReducer.removeDuplicateUserMessages(in: [rich, rawEcho])
+
+        XCTAssertEqual(deduped.count, 1)
+        XCTAssertEqual(deduped[0].id, "user-rich")
+        XCTAssertEqual(deduped[0].text, "one last time")
+        XCTAssertEqual(deduped[0].skillMentions, ["check-code"])
+    }
+
     func testRemoveDuplicateUserMessagesKeepsPromptsWithDifferentFileMentions() {
         let now = Date()
         var first = makeMessage(
