@@ -67,15 +67,7 @@ struct CodexMobileApp: App {
             return false
         }
 
-        let threadId: String?
-        if url.host?.caseInsensitiveCompare("thread") == .orderedSame {
-            threadId = url.pathComponents.dropFirst().first
-        } else if url.host?.isEmpty != false,
-                  url.pathComponents.dropFirst().first?.caseInsensitiveCompare("thread") == .orderedSame {
-            threadId = url.pathComponents.dropFirst(2).first
-        } else {
-            threadId = nil
-        }
+        let threadId = Self.remodexDeepLinkThreadID(from: url)
 
         let decodedThreadId = threadId?.removingPercentEncoding ?? threadId
         guard let normalizedThreadId = decodedThreadId?
@@ -86,6 +78,34 @@ struct CodexMobileApp: App {
 
         codexService.handleNotificationOpen(threadId: normalizedThreadId, turnId: nil)
         return true
+    }
+
+    private static func remodexDeepLinkThreadID(from url: URL) -> String? {
+        let host = url.host?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pathComponents = url.pathComponents
+            .dropFirst()
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        if let host, isThreadRouteComponent(host) {
+            return pathComponents.first
+        }
+        if host?.isEmpty != false,
+           let route = pathComponents.first,
+           Self.isThreadRouteComponent(route) {
+            return pathComponents.dropFirst().first
+        }
+
+        let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        return queryItems.first { item in
+            item.name.caseInsensitiveCompare("threadId") == .orderedSame
+                || item.name.caseInsensitiveCompare("thread") == .orderedSame
+        }?.value
+    }
+
+    private static func isThreadRouteComponent(_ value: String) -> Bool {
+        value.caseInsensitiveCompare("thread") == .orderedSame
+            || value.caseInsensitiveCompare("threads") == .orderedSame
     }
 
     // Configures RevenueCat once at launch using the client-safe public SDK key.

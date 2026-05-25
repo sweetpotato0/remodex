@@ -605,6 +605,31 @@ final class CodexServiceIncomingRunIndicatorTests: XCTestCase {
         XCTAssertNil(service.threadRunBadgeState(for: threadID))
     }
 
+    func testDeletingRunningThreadClearsRuntimeState() {
+        let service = makeService()
+        let threadID = "thread-\(UUID().uuidString)"
+        let turnID = "turn-\(UUID().uuidString)"
+        service.threads = [
+            CodexThread(id: threadID, title: "Running chat", cwd: "/tmp/remodex"),
+        ]
+        service.runningThreadIDs.insert(threadID)
+        service.activeTurnIdByThread[threadID] = turnID
+        service.threadIdByTurnID[turnID] = threadID
+        service.activeTurnId = turnID
+        service.latestTurnTerminalStateByThread[threadID] = .completed
+        service.readyThreadIDs.insert(threadID)
+
+        service.deleteThreadLocally(threadID)
+
+        XCTAssertFalse(service.runningThreadIDs.contains(threadID))
+        XCTAssertNil(service.activeTurnID(for: threadID))
+        XCTAssertNil(service.threadIdByTurnID[turnID])
+        XCTAssertNil(service.activeTurnId)
+        XCTAssertNil(service.latestTurnTerminalState(for: threadID))
+        XCTAssertNil(service.threadRunBadgeState(for: threadID))
+        XCTAssertFalse(service.threads.contains { $0.id == threadID })
+    }
+
     func testThreadHasActiveOrRunningTurnUsesRunningFallback() {
         let service = makeService()
         let threadID = "thread-\(UUID().uuidString)"

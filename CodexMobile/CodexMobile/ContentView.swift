@@ -127,6 +127,9 @@ struct ContentView: View {
             .task(id: rootSheetPresentationFingerprint) {
                 syncRootSheetPresentationIfNeeded()
             }
+            .task(id: codex.externalThreadOpenRequest?.id) {
+                routeExternalThreadOpenIfNeeded()
+            }
             .onChange(of: isSidebarOpen) { wasOpen, isOpen in
                 debugSidebarLog(
                     "open-state changed wasOpen=\(wasOpen) isOpen=\(isOpen) prewarmed=\(isSidebarPrewarmed) "
@@ -170,6 +173,7 @@ struct ContentView: View {
             .onChange(of: codex.threads) { _, threads in
                 debugSidebarLog("threads changed count=\(threads.count) sidebarOpen=\(isSidebarOpen) prewarmed=\(isSidebarPrewarmed)")
                 syncSelectedThread(with: threads)
+                routeExternalThreadOpenIfNeeded()
                 scheduleSidebarPrewarmIfNeeded()
                 syncDisplayIsland()
             }
@@ -1172,6 +1176,39 @@ struct ContentView: View {
         }
     }
 
+    private func routeExternalThreadOpenIfNeeded() {
+        guard let request = codex.externalThreadOpenRequest else {
+            return
+        }
+
+        let threadId = request.threadId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !threadId.isEmpty else {
+            return
+        }
+        let thread: CodexThread
+        if let existingThread = codex.threads.first(where: { $0.id == threadId }) {
+            guard existingThread.syncState != .archivedLocal else {
+                return
+            }
+            thread = existingThread
+        } else {
+            thread = CodexThread(id: threadId, title: CodexThread.defaultDisplayTitle)
+            codex.upsertThread(thread)
+        }
+
+        activeNewChatDraftRoute = nil
+        isOpeningNewChatFromSidebar = false
+        selectedThread = thread
+        codex.activeThreadId = thread.id
+        codex.markThreadAsViewed(thread.id)
+        clearDisplayIslandOutcome(for: thread.id)
+        syncDisplayIsland()
+        if shouldPresentSidebarAsNavigation {
+            navigationPath = [.thread(id: thread.id)]
+        }
+        codex.externalThreadOpenRequest = nil
+    }
+
     // Keeps sidebar chat creation compose-first while preserving which affordance
     // opened it, so the draft UI can distinguish general Chat from folder Chat.
     private func openNewChatDraftFromSidebar(
@@ -1980,16 +2017,21 @@ struct ContentView: View {
 
     private func reconcileDisplayIslandCompletions() {
         let currentRunningIDs = displayIslandCurrentRunningThreadIDs()
-        let completedIDs = displayIslandLastRunningThreadIDs.subtracting(currentRunningIDs)
+        let visibleThreadIDs = displayIslandVisibleThreadIDs()
+        let completedIDs = displayIslandLastRunningThreadIDs
+            .intersection(visibleThreadIDs)
+            .subtracting(currentRunningIDs)
         let terminalStates = codex.latestTurnTerminalStateByThread
 
         displayIslandCompletedBanners.removeAll { banner in
-            currentRunningIDs.contains(banner.threadId)
+            !visibleThreadIDs.contains(banner.threadId)
+                || currentRunningIDs.contains(banner.threadId)
                 || codex.latestTurnTerminalState(for: banner.threadId) == .failed
                 || codex.latestTurnTerminalState(for: banner.threadId) == .stopped
         }
         displayIslandFailedBanners.removeAll { banner in
-            currentRunningIDs.contains(banner.threadId)
+            !visibleThreadIDs.contains(banner.threadId)
+                || currentRunningIDs.contains(banner.threadId)
                 || codex.latestTurnTerminalState(for: banner.threadId) == .completed
                 || codex.latestTurnTerminalState(for: banner.threadId) == .stopped
         }
@@ -2006,7 +2048,10 @@ struct ContentView: View {
             rememberDisplayIslandCompletion(threadId: threadId)
         }
 
-        for (threadId, terminalState) in terminalStates where !currentRunningIDs.contains(threadId) {
+        let visibleTerminalStates = terminalStates.filter { threadId, _ in
+            visibleThreadIDs.contains(threadId) && !currentRunningIDs.contains(threadId)
+        }
+        for (threadId, terminalState) in visibleTerminalStates {
             guard displayIslandLastTerminalStatesByThread[threadId] != terminalState else {
                 continue
             }
@@ -2021,9 +2066,9 @@ struct ContentView: View {
             }
         }
 
-        displayIslandLastRunningThreadIDs = currentRunningIDs
+        displayIslandLastRunningThreadIDs = currentRunningIDs.intersection(visibleThreadIDs)
         displayIslandLastTerminalStatesByThread = terminalStates.filter { threadId, _ in
-            !currentRunningIDs.contains(threadId)
+            visibleThreadIDs.contains(threadId) && !currentRunningIDs.contains(threadId)
         }
     }
 
@@ -2048,7 +2093,13 @@ struct ContentView: View {
     }
 
     private func displayIslandCurrentRunningThreadIDs() -> Set<String> {
-        codex.runningThreadIDs.union(Set(codex.activeTurnIdByThread.keys))
+        codex.runningThreadIDs
+            .union(Set(codex.activeTurnIdByThread.keys))
+            .intersection(displayIslandVisibleThreadIDs())
+    }
+
+    private func displayIslandVisibleThreadIDs() -> Set<String> {
+        Set(codex.threads.map(\.id))
     }
 
     private var displayIslandTimelineFingerprint: String {
