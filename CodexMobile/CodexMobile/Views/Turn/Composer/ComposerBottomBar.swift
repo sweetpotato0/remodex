@@ -405,7 +405,7 @@ private struct ComposerRuntimeMenuControl: View, Equatable {
                 )
             )
         }
-        .layoutPriority(1)
+        .fixedSize(horizontal: true, vertical: false)
         .tint(metaLabelColor)
         .accessibilityLabel(runtimeAccessibilityLabel)
     }
@@ -425,7 +425,6 @@ private struct ComposerRuntimeMenuControl: View, Equatable {
         return trimmed
     }
 
-    // Keeps inline runtime metadata short so stop + send controls do not move the composer.
     private var compactModelTitle: String {
         let normalized = selectedModelTitle
             .replacingOccurrences(of: "-", with: " ")
@@ -474,27 +473,32 @@ private struct ComposerRuntimeMenuControl: View, Equatable {
                     .foregroundStyle(Color.primary)
             }
 
-            titleText(modelPart: modelPart, effortPart: effortPart)
-                .font(metaTextFont)
-                .fontWeight(.regular)
-                .lineLimit(1)
-                .truncationMode(.tail)
+            HStack(spacing: 4) {
+                Text(modelPart)
+                    .font(metaTextFont)
+                    .fontWeight(.regular)
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .layoutPriority(1)
+
+                if let effortPart, !effortPart.isEmpty {
+                    Text(effortPart)
+                        .font(metaTextFont)
+                        .fontWeight(.regular)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .layoutPriority(0)
+                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            // Grow left from the mic; truncate effort first when space is tight.
+            .frame(maxWidth: maxInlineRuntimeLabelWidth, alignment: .trailing)
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 4)
-        .fixedSize(horizontal: true, vertical: false)
-        .frame(maxWidth: maxInlineRuntimeLabelWidth, alignment: .leading)
-        .clipped()
         .contentShape(Rectangle())
-    }
-
-    // Concatenated Text lets each segment carry its own foreground style.
-    private func titleText(modelPart: String, effortPart: String?) -> Text {
-        let model = Text(modelPart).foregroundStyle(Color.primary)
-        guard let effortPart, !effortPart.isEmpty else { return model }
-        return model
-            + Text(" ")
-            + Text(effortPart).foregroundStyle(.tertiary)
     }
 }
 

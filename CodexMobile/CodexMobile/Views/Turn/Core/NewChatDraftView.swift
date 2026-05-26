@@ -560,9 +560,15 @@ struct NewChatDraftView: View {
     private var composer: some View {
         VStack(spacing: 8) {
             if let voiceRecoveryPresentation {
-                ConnectionRecoveryCard(snapshot: voiceRecoveryPresentation.snapshot) {
-                    handleVoiceRecoveryAction(voiceRecoveryPresentation.action)
-                }
+                ConnectionRecoveryCard(
+                    snapshot: voiceRecoveryPresentation.snapshot,
+                    onTap: {
+                        handleVoiceRecoveryAction(voiceRecoveryPresentation.action)
+                    },
+                    onDismiss: {
+                        voiceInput.clearRecovery()
+                    }
+                )
                 .padding(.horizontal, 12)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }

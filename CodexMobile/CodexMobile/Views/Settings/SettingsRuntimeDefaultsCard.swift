@@ -14,7 +14,10 @@ struct SettingsRuntimeDefaultsCard: View {
     private let settingsAccentColor = Color.primary
 
     var body: some View {
-        SettingsCard(title: "Runtime defaults") {
+        SettingsCard(
+            title: "Composer Defaults",
+            footer: "Used for new chats. Git writer model applies to commit messages and PR drafts."
+        ) {
             Picker("Model", selection: runtimeModelSelection) {
                 Text("Auto").tag(runtimeAutoValue)
                 ForEach(runtimeModelOptions, id: \.id) { model in
@@ -54,7 +57,7 @@ struct SettingsRuntimeDefaultsCard: View {
             .pickerStyle(.menu)
             .tint(settingsAccentColor)
 
-            Picker("Git writer model", selection: gitWriterModelSelection) {
+            Picker("Git Writer", selection: gitWriterModelSelection) {
                 ForEach(gitWriterModelOptions, id: \.id) { model in
                     Text(TurnComposerMetaMapper.modelTitle(for: model))
                         .tag(model.id)
@@ -63,10 +66,6 @@ struct SettingsRuntimeDefaultsCard: View {
             .pickerStyle(.menu)
             .tint(settingsAccentColor)
             .disabled(gitWriterModelOptions.isEmpty)
-
-            Text("Used for AI-generated commit messages and PR drafts. Defaults to GPT-5.4 Mini when available.")
-                .font(AppFont.caption())
-                .foregroundStyle(.secondary)
         }
     }
 
