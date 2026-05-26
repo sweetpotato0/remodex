@@ -403,18 +403,6 @@ struct MessageRow: View, Equatable {
         return shouldShowInitialStreamingText(nextText)
     }
 
-    private func assistantTimestampText(actionText: String) -> String? {
-        guard message.role == .assistant,
-              !message.isStreaming,
-              message.deliveryState == .confirmed else {
-            return nil
-        }
-
-        let hasVisibleTimestampTarget = !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !message.attachments.isEmpty
-        return hasVisibleTimestampTarget ? message.formattedTimelineTime() : nil
-    }
-
     var body: some View {
         let window = displayWindow
         let text = displayText(from: window)
@@ -465,13 +453,6 @@ struct MessageRow: View, Equatable {
                     onTap: expandVisibleText
                 )
                 .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
-            }
-
-            if let timestampText = assistantTimestampText(actionText: actionText) {
-                Text(timestampText)
-                    .font(AppFont.caption2())
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .sheet(item: $selectableTextSheet) { sheet in

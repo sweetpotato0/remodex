@@ -1371,8 +1371,29 @@ private struct TurnTimelineScrollObserverModifier: ViewModifier {
     }
 }
 
+// Coalesces high-frequency observer callbacks without mutating SwiftUI state from onChange.
+private final class MainQueueUpdateCoalescer {
+    private var isScheduled = false
+    private var pendingAction: (() -> Void)?
+
+    func schedule(_ action: @escaping () -> Void) {
+        pendingAction = action
+        guard !isScheduled else { return }
+        isScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let action = pendingAction
+            pendingAction = nil
+            isScheduled = false
+            action?()
+        }
+    }
+}
+
 // Groups history/loading observers separately from rendering to avoid one huge ViewBuilder expression.
 private struct TurnTimelineHistoryChangeHandlersModifier: ViewModifier {
+    @State private var timelineChangeCoalescer = MainQueueUpdateCoalescer()
+
     let timelineChangeToken: Int
     let messageCount: Int
     let isLoadingRemoteEarlierMessages: Bool
@@ -1390,25 +1411,37 @@ private struct TurnTimelineHistoryChangeHandlersModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onChange(of: timelineChangeToken) { _, _ in
-                onTimelineChange()
+                timelineChangeCoalescer.schedule(onTimelineChange)
             }
             .onChange(of: messageCount) { oldCount, newCount in
-                onMessageCountChange(oldCount, newCount)
+                performAfterSwiftUIUpdate {
+                    onMessageCountChange(oldCount, newCount)
+                }
             }
             .onChange(of: isLoadingRemoteEarlierMessages) { _, newValue in
-                onRemoteEarlierLoadingChange(newValue)
+                performAfterSwiftUIUpdate {
+                    onRemoteEarlierLoadingChange(newValue)
+                }
             }
             .onChange(of: initialTurnsLoaded) { _, didLoad in
                 if didLoad {
-                    onInitialHistoryLoaded()
+                    performAfterSwiftUIUpdate(onInitialHistoryLoaded)
                 }
             }
             .onChange(of: hasRemoteEarlierMessages) { _, newValue in
-                onRemoteEarlierAvailabilityChange(newValue)
+                performAfterSwiftUIUpdate {
+                    onRemoteEarlierAvailabilityChange(newValue)
+                }
             }
             .onChange(of: olderHistoryLoadErrorMessage) { _, newValue in
-                onOlderHistoryErrorChange(newValue)
+                performAfterSwiftUIUpdate {
+                    onOlderHistoryErrorChange(newValue)
+                }
             }
+    }
+
+    private func performAfterSwiftUIUpdate(_ action: @escaping () -> Void) {
+        DispatchQueue.main.async(execute: action)
     }
 }
 
@@ -1437,31 +1470,37 @@ private struct TurnTimelineRenderChangeHandlersModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onChange(of: isThreadRunning) { _, _ in
-                onThreadRunningChange()
+                performAfterSwiftUIUpdate(onThreadRunningChange)
             }
             .onChange(of: isSendInFlight) { _, _ in
-                onSendInFlightChange()
+                performAfterSwiftUIUpdate(onSendInFlightChange)
             }
             .onChange(of: threadID) { _, _ in
-                onThreadIDChange()
+                performAfterSwiftUIUpdate(onThreadIDChange)
             }
             .onChange(of: activeTurnID) { _, _ in
-                onActiveTurnIDChange()
+                performAfterSwiftUIUpdate(onActiveTurnIDChange)
             }
             .onChange(of: latestTurnTerminalState) { _, _ in
-                onTerminalStateChange()
+                performAfterSwiftUIUpdate(onTerminalStateChange)
             }
             .onChange(of: completedTurnIDs) { _, _ in
-                onCompletedTurnIDsChange()
+                performAfterSwiftUIUpdate(onCompletedTurnIDsChange)
             }
             .onChange(of: stoppedTurnIDs) { _, _ in
-                onStoppedTurnIDsChange()
+                performAfterSwiftUIUpdate(onStoppedTurnIDsChange)
             }
             .onChange(of: visibleTailCount) { _, _ in
-                onVisibleTailCountChange()
+                performAfterSwiftUIUpdate(onVisibleTailCountChange)
             }
             .onChange(of: shouldAnchorToAssistantResponse) { _, newValue in
-                onAssistantAnchorChange(newValue)
+                performAfterSwiftUIUpdate {
+                    onAssistantAnchorChange(newValue)
+                }
             }
+    }
+
+    private func performAfterSwiftUIUpdate(_ action: @escaping () -> Void) {
+        DispatchQueue.main.async(execute: action)
     }
 }

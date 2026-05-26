@@ -51,7 +51,7 @@ struct ComposerBottomBar: View {
     private let metaLabelColor = Color(.secondaryLabel)
     private var metaTextFont: Font { AppFont.subheadline() }
     private let composerIconSide: CGFloat = 22
-    private let composerCircleDiameter: CGFloat = 30
+    private let composerCircleDiameter: CGFloat = 26
     private let inlineAccessControlSize: CGFloat = 32
     private let inlineAccessControlIconSize: CGFloat = 20
 
