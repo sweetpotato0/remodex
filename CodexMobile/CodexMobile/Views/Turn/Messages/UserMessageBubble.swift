@@ -105,7 +105,7 @@ struct UserMessageBubble: View {
         case .failed:
             return "Failed"
         case .confirmed:
-            return message.createdAt.formatted(date: .omitted, time: .shortened)
+            return message.formattedTimelineTime()
         }
     }
 

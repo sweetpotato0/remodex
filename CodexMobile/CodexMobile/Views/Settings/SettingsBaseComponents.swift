@@ -1,7 +1,8 @@
 // FILE: SettingsBaseComponents.swift
 // Purpose: Shared section and row primitives used across settings sections.
 // Layer: Settings UI primitives
-// Exports: SettingsCard, SettingsButton, SettingsStatusPill, SettingsLinkRow, SettingsValueRow
+// Exports: SettingsCard, SettingsButton, SettingsStatusPill, SettingsLinkRow, SettingsValueRow,
+//   SettingsMenuPickerRow
 // Depends on: SwiftUI, AppFont
 
 import SwiftUI
@@ -104,6 +105,60 @@ struct SettingsValueRow: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.85)
         }
+    }
+}
+
+struct SettingsMenuPickerOption<Value: Hashable>: Identifiable {
+    let value: Value
+    let title: String
+
+    var id: Value { value }
+}
+
+struct SettingsMenuPickerRow<Value: Hashable>: View {
+    let title: String
+    let value: String
+    let options: [SettingsMenuPickerOption<Value>]
+    @Binding var selection: Value
+    var isDisabled = false
+
+    var body: some View {
+        Menu {
+            ForEach(options) { option in
+                Button {
+                    selection = option.value
+                } label: {
+                    if option.value == selection {
+                        Label(option.title, systemImage: "checkmark")
+                    } else {
+                        Text(option.title)
+                    }
+                }
+            }
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(title)
+                    .font(AppFont.body())
+                    .foregroundStyle(.primary)
+
+                Spacer(minLength: 8)
+
+                HStack(spacing: 6) {
+                    Text(value)
+                        .font(AppFont.subheadline())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+
+                    RemodexIcon.image(systemName: "chevron.up.chevron.down")
+                        .font(AppFont.caption2(weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled || options.isEmpty)
     }
 }
 
