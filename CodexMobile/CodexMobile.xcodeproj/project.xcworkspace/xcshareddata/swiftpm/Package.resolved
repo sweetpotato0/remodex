@@ -1,5 +1,5 @@
 {
-  "originHash" : "4e8865b3f6e5570eb67c95a18c10cba6cf6978d8a250756c37b4210af871dba8",
+  "originHash" : "1be913732faddc9616afab4e9e23a793048af230b1a084a0765bd72b45a18a3e",
   "pins" : [
     {
       "identity" : "bigint",
@@ -20,9 +20,9 @@
       }
     },
     {
-      "identity" : "purchases-ios-spm",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/RevenueCat/purchases-ios-spm.git",
+      "identity" : "purchases-ios-spm-live",
+      "kind" : "localSourceControl",
+      "location" : "/Users/zhanglu/learn/ai/remodex/.vendor/purchases-ios-spm-live",
       "state" : {
         "revision" : "abb0d68c3e7ba97b16ab51c38fcaca16b0e358c8",
         "version" : "5.66.0"

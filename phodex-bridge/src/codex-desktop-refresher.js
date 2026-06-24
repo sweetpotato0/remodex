@@ -13,6 +13,7 @@ const { createThreadRolloutActivityWatcher } = require("./rollout-watch");
 const DEFAULT_BUNDLE_ID = "com.openai.codex";
 const DEFAULT_APP_PATH = "/Applications/Codex.app";
 const DEFAULT_DEBOUNCE_MS = 1200;
+const DEFAULT_RELAY_URL = "wss://remodex.allintools.club/relay";
 const DEFAULT_FALLBACK_NEW_THREAD_MS = 2_000;
 const DEFAULT_MID_RUN_REFRESH_THROTTLE_MS = 3_000;
 const DEFAULT_ROLLOUT_LOOKUP_TIMEOUT_MS = 5_000;
@@ -527,8 +528,8 @@ function readBridgeConfig({
   const privateDefaults = readPrivatePackageDefaults({ runtimeRoot, fsImpl });
   const sourceCheckout = isSourceCheckout(runtimeRoot, fsImpl);
   const defaultRelayUrl = sourceCheckout
-    ? ""
-    : privateDefaults.relayUrl;
+    ? DEFAULT_RELAY_URL
+    : (privateDefaults.relayUrl || DEFAULT_RELAY_URL);
   const explicitRelayUrl = readFirstDefinedEnv(
     ["REMODEX_RELAY", "PHODEX_RELAY"],
     "",
@@ -592,7 +593,7 @@ function readPrivatePackageDefaults({ runtimeRoot, fsImpl }) {
   const defaultsPath = path.join(runtimeRoot, "src", "private-defaults.json");
   if (!fsImpl.existsSync(defaultsPath)) {
     return {
-      relayUrl: "",
+      relayUrl: DEFAULT_RELAY_URL,
       pushServiceUrl: "",
     };
   }
@@ -600,12 +601,12 @@ function readPrivatePackageDefaults({ runtimeRoot, fsImpl }) {
   try {
     const parsed = safeParseJSON(fsImpl.readFileSync(defaultsPath, "utf8"));
     return {
-      relayUrl: readString(parsed?.relayUrl) || "",
+      relayUrl: readString(parsed?.relayUrl) || DEFAULT_RELAY_URL,
       pushServiceUrl: readString(parsed?.pushServiceUrl) || "",
     };
   } catch {
     return {
-      relayUrl: "",
+      relayUrl: DEFAULT_RELAY_URL,
       pushServiceUrl: "",
     };
   }

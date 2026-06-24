@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		11A2B3C4D5E6F708192A3B4C /* TurnFileAutocompleteTokenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A2B3C4D5E6F708192A3B4D /* TurnFileAutocompleteTokenTests.swift */; };
 		1BF7B512D49503A3C3290F00 /* BridgeMenuBarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1FC345ADD350213550F36C /* BridgeMenuBarStore.swift */; };
-		1DB06CCC628601FAF334C9B2 /* RemodexWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C31FD4BBF43CBB431839BBF8 /* RemodexWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		1DB06CCC628601FAF334C9B2 /* RemodexWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C31FD4BBF43CBB431839BBF8 /* RemodexWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		22B3C4D5E6F708192A3B4C5D /* CodexFuzzyFileSearchDecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22B3C4D5E6F708192A3B4C5E /* CodexFuzzyFileSearchDecodeTests.swift */; };
 		2A6D4B8C1E3F507192A4B6C8 /* CodexStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6D4B8C1E3F507192A4B6C9 /* CodexStatusTests.swift */; };
 		309A8DBD0FC5466F217D2793 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A37794F4B32C1952A3770E0 /* Foundation.framework */; };
@@ -122,15 +122,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		17BE0F06A89467BC99605261 /* Embed App Extensions */ = {
+		17BE0F06A89467BC99605261 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				1DB06CCC628601FAF334C9B2 /* RemodexWidget.appex in Embed App Extensions */,
+				1DB06CCC628601FAF334C9B2 /* RemodexWidget.appex in Embed Foundation Extensions */,
 			);
-			name = "Embed App Extensions";
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -550,7 +550,7 @@
 				C09A76AA2F4B8D7B003B3F3A /* Sources */,
 				C09A76AB2F4B8D7B003B3F3A /* Frameworks */,
 				C09A76AC2F4B8D7B003B3F3A /* Resources */,
-				17BE0F06A89467BC99605261 /* Embed App Extensions */,
+				17BE0F06A89467BC99605261 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
@@ -599,7 +599,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2620;
-				LastUpgradeCheck = 2640;
+				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					B37F412BAE6D4B4BFF0980D2 = {
 						CreatedOnToolsVersion = 26.2;
@@ -619,7 +619,7 @@
 			mainGroup = C09A76A52F4B8D7B003B3F3A;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				C04E21492F71D34100AA3193 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				C04E21492F71D34100AA3193 /* XCRemoteSwiftPackageReference "purchases-ios-spm-live" */,
 				C078C1A02F79000100BEEF01 /* XCRemoteSwiftPackageReference "Citadel" */,
 				C0A34C382FBA9D04007294E3 /* XCRemoteSwiftPackageReference "RemodexTextKit" */,
 				D1A000000000000000000001 /* XCRemoteSwiftPackageReference "Runestone" */,
@@ -792,7 +792,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 130;
-				DEVELOPMENT_TEAM = HR24WHR326;
+				DEVELOPMENT_TEAM = 8MVSPXZAK4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RemodexWidget/Info.plist;
@@ -803,7 +803,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.6;
-				PRODUCT_BUNDLE_IDENTIFIER = com.emanueledipietro.Remodex.RemodexWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = club.allintools.remodex.RemodexWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -866,7 +866,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 130;
-				DEVELOPMENT_TEAM = HR24WHR326;
+				DEVELOPMENT_TEAM = 8MVSPXZAK4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RemodexWidget/Info.plist;
@@ -877,7 +877,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.6;
-				PRODUCT_BUNDLE_IDENTIFIER = com.emanueledipietro.Remodex.RemodexWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = club.allintools.remodex.RemodexWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1081,7 +1081,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1129,7 +1129,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1283,9 +1283,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		C04E21492F71D34100AA3193 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+		C04E21492F71D34100AA3193 /* XCRemoteSwiftPackageReference "purchases-ios-spm-live" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			repositoryURL = "file:///Users/zhanglu/learn/ai/remodex/.vendor/purchases-ios-spm-live";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 5.66.0;
@@ -1328,7 +1328,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		C04E214A2F71D34100AA3193 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = C04E21492F71D34100AA3193 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			package = C04E21492F71D34100AA3193 /* XCRemoteSwiftPackageReference "purchases-ios-spm-live" */;
 			productName = RevenueCat;
 		};
 		C078C1A12F79000100BEEF01 /* Citadel */ = {

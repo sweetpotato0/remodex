@@ -127,7 +127,7 @@ test("readBridgeConfig keeps safe defaults and explicit overrides", () => {
   });
   assert.equal(macConfig.refreshEnabled, false);
   assert.equal(macConfig.keepMacAwakeEnabled, false);
-  assert.equal(macConfig.relayUrl, "");
+  assert.equal(macConfig.relayUrl, "wss://remodex.allintools.club/relay");
   assert.equal(macConfig.pushServiceUrl, "");
   assert.equal(persistedKeepAwakeConfig.keepMacAwakeEnabled, false);
   assert.equal(macEndpointConfig.refreshEnabled, false);
@@ -182,7 +182,7 @@ test("readBridgeConfig uses a packaged push default only when it is explicitly p
   assert.equal(config.pushServiceUrl, "https://relay.example");
 });
 
-test("readBridgeConfig does not use the hosted fallback inside a source checkout", () => {
+test("readBridgeConfig uses the default relay fallback inside a source checkout", () => {
   const config = readBridgeConfig({
     env: {},
     runtimeRoot: "/workspace/phodex-bridge",
@@ -193,7 +193,7 @@ test("readBridgeConfig does not use the hosted fallback inside a source checkout
     },
   });
 
-  assert.equal(config.relayUrl, "");
+  assert.equal(config.relayUrl, "wss://remodex.allintools.club/relay");
   assert.equal(config.pushServiceUrl, "");
 });
 
